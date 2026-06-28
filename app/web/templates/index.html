@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ title }} — Web Local</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            surface: { DEFAULT: "#1a1d23", card: "#22262e", border: "#2d333b" },
+            accent: { DEFAULT: "#22d3ee", dim: "#0891b2" },
+            progress: { DEFAULT: "#22c55e", track: "#14532d" },
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="h-full bg-surface text-slate-200 antialiased">
+  <div class="min-h-full flex flex-col">
+    <header class="border-b border-surface-border bg-surface-card/80 backdrop-blur sticky top-0 z-10">
+      <div class="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
+        <span class="w-1 h-8 rounded-full bg-accent shrink-0" aria-hidden="true"></span>
+        <div>
+          <h1 class="text-xl font-semibold tracking-tight text-white">{{ title }}</h1>
+          <p class="text-sm text-slate-400">Interface web local · pipeline idêntico à GUI</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 max-w-5xl mx-auto w-full px-4 py-8 space-y-8">
+      <form id="pipeline-form" class="space-y-6" enctype="multipart/form-data">
+        <section class="rounded-xl border border-surface-border bg-surface-card p-5 space-y-4">
+          <h2 class="text-sm font-medium uppercase tracking-wider text-accent">Entrada</h2>
+
+          <div>
+            <label for="urls" class="block text-sm text-slate-300 mb-1">URLs (uma por linha)</label>
+            <textarea
+              id="urls"
+              name="urls"
+              rows="4"
+              placeholder="https://www.youtube.com/watch?v=…"
+              class="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
+            ></textarea>
+          </div>
+
+          <div>
+            <label for="files" class="block text-sm text-slate-300 mb-1">Vídeos locais</label>
+            <input
+              id="files"
+              name="files"
+              type="file"
+              accept="video/*,.mp4,.mkv,.webm,.mov"
+              multiple
+              class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-accent/20 file:text-accent hover:file:bg-accent/30"
+            />
+          </div>
+        </section>
+
+        <section class="rounded-xl border border-surface-border bg-surface-card p-5 space-y-4">
+          <h2 class="text-sm font-medium uppercase tracking-wider text-accent">Opções</h2>
+
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label for="lang" class="block text-sm text-slate-300 mb-1">Idioma das legendas</label>
+              <select id="lang" name="lang" class="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm focus:ring-2 focus:ring-accent/50">
+                <option value="pt" selected>Português</option>
+                <option value="en">Inglês</option>
+              </select>
+            </div>
+            <div>
+              <label for="position" class="block text-sm text-slate-300 mb-1">Posição da legenda</label>
+              <select id="position" name="position" class="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm focus:ring-2 focus:ring-accent/50">
+                <option value="bottom" selected>Inferior</option>
+                <option value="top">Superior</option>
+              </select>
+            </div>
+          </div>
+
+          <fieldset class="space-y-2">
+            <legend class="text-sm text-slate-300">Dublagem (Edge-TTS)</legend>
+            <label class="inline-flex items-center gap-2 mr-4 cursor-pointer">
+              <input type="checkbox" id="dub-en" name="dub_en" value="true" class="rounded border-surface-border bg-surface text-accent focus:ring-accent" />
+              <span class="text-sm">Dublar em inglês</span>
+            </label>
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="dub-pt" name="dub_pt" value="true" class="rounded border-surface-border bg-surface text-accent focus:ring-accent" />
+              <span class="text-sm">Dublar em português</span>
+            </label>
+          </fieldset>
+
+          <label class="inline-flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="export-zip" name="export_zip" value="true" class="rounded border-surface-border bg-surface text-accent focus:ring-accent" />
+            <span class="text-sm">Exportar .zip ao concluir</span>
+          </label>
+        </section>
+
+        <section class="rounded-xl border border-surface-border bg-surface-card p-5 space-y-3">
+          <div class="flex justify-between text-sm">
+            <span id="progress-label" class="text-slate-400">Aguardando…</span>
+            <span id="progress-pct" class="font-mono text-progress">0%</span>
+          </div>
+          <div class="h-3 rounded-full bg-progress-track overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-bar-wrap">
+            <div id="progress-bar" class="h-full w-0 rounded-full bg-progress transition-all duration-300 ease-out"></div>
+          </div>
+          <p id="status-message" class="text-xs text-slate-500 truncate"></p>
+        </section>
+
+        <div class="flex flex-wrap gap-3" >
+          <button
+            type="submit"
+            id="submit-btn"
+            class="px-6 py-3 rounded-lg bg-accent text-surface font-semibold hover:bg-cyan-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Gerar clipes agora
+          </button>
+          <button
+            type="button"
+            id="add-playlist-btn"
+            class="px-6 py-3 rounded-lg border border-accent/40 text-accent hover:bg-accent/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Adicionar à playlist
+          </button>
+        </div>
+        <p id="form-error" class="text-sm text-red-400 hidden"></p>
+        <p id="queue-hint" class="text-xs text-slate-500 hidden"></p>
+      </form>
+
+      <section class="rounded-xl border border-surface-border bg-surface-card overflow-hidden">
+        <div class="px-5 py-4 border-b border-surface-border flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-sm font-medium uppercase tracking-wider text-accent">Playlist</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Estados: pendente → processar → publicado ou descartado</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" id="process-playlist-btn" class="px-4 py-2 text-sm rounded-lg bg-progress/20 text-progress hover:bg-progress/30 disabled:opacity-50">
+              Processar playlist
+            </button>
+            <button type="button" id="refresh-playlist" class="text-xs text-slate-400 hover:text-accent px-2 py-2">Atualizar</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto max-h-80 overflow-y-auto">
+          <table class="w-full text-sm">
+            <thead class="text-left text-slate-500 border-b border-surface-border sticky top-0 bg-surface-card">
+              <tr>
+                <th class="px-5 py-3 font-medium">Fonte</th>
+                <th class="px-5 py-3 font-medium w-24">Workflow</th>
+                <th class="px-5 py-3 font-medium w-24">Pipeline</th>
+                <th class="px-5 py-3 font-medium w-16">%</th>
+                <th class="px-5 py-3 font-medium w-48"></th>
+              </tr>
+            </thead>
+            <tbody id="playlist-tbody" class="divide-y divide-surface-border">
+              <tr><td colspan="5" class="px-5 py-6 text-slate-500 text-center">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="rounded-xl border border-surface-border bg-surface-card overflow-hidden">
+        <div class="px-5 py-4 border-b border-surface-border flex items-center justify-between">
+          <h2 class="text-sm font-medium uppercase tracking-wider text-accent">Últimas execuções</h2>
+          <button type="button" id="refresh-runs" class="text-xs text-slate-400 hover:text-accent">Atualizar</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="text-left text-slate-500 border-b border-surface-border">
+              <tr>
+                <th class="px-5 py-3 font-medium">Arquivo</th>
+                <th class="px-5 py-3 font-medium w-28">Duração</th>
+                <th class="px-5 py-3 font-medium w-24"></th>
+              </tr>
+            </thead>
+            <tbody id="runs-tbody" class="divide-y divide-surface-border">
+              <tr><td colspan="3" class="px-5 py-6 text-slate-500 text-center">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/js/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+# TTS local (Kokoro) — instale PyTorch CUDA antes (ver scripts/install_local_tts.sh).
+# RTX 50xx (Blackwell): pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128
+kokoro>=0.9.4
+soundfile>=0.12.0

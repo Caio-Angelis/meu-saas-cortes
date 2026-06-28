@@ -1,0 +1,17 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = [
+  "E501",  # linha longa ok em alguns FFmpeg filters/strings
+  "E402",  # imports após _venv_reexec.ensure_venv() em main/gui (intencional)
+  "UP045", # compat com typing.Optional em alguns módulos
+  "UP047", # não exigimos PEP695 type params aqui
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+

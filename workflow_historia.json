@@ -1,0 +1,240 @@
+{
+  "1": {
+    "inputs": {
+      "width": 512,
+      "height": 896,
+      "batch_size": 16
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "2": {
+    "inputs": {
+      "ckpt_name": "v1-5-pruned-emaonly.ckpt"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "4": {
+    "inputs": {
+      "text": "a pig running",
+      "clip": [
+        "2",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "5": {
+    "inputs": {
+      "text": "(worst quality:1.5), (low quality:1.5), (normal quality:1.5), (deformed faces:1.4), (bad anatomy:1.4), extra limbs, extra hands, extra legs, extra head, duplicate bodies, duplicate faces, mutated hands, poorly drawn face, poorly drawn hands, missing limbs, floating limbs, disconnected limbs, blurry, watermark, text, signature",
+      "clip": [
+        "2",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative)"
+    }
+  },
+  "6": {
+    "inputs": {
+      "seed": 956857523373463,
+      "steps": 30,
+      "cfg": 7.0,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1,
+      "model": [
+        "2",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "7": {
+    "inputs": {
+      "samples": [
+        "6",
+        0
+      ],
+      "vae": [
+        "2",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "8": {
+    "inputs": {
+      "frame_rate": 3,
+      "loop_count": 0,
+      "filename_prefix": "AnimateDiff",
+      "format": "video/h264-mp4",
+      "pix_fmt": "yuv420p",
+      "crf": 19,
+      "save_metadata": false,
+      "trim_to_audio": false,
+      "pingpong": false,
+      "save_output": true,
+      "images": [
+        "14",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Video Combine 🎥🅥🅗🅢"
+    }
+  },
+  "9": {
+    "inputs": {
+      "model_name": "bbox/face_yolov8m.pt"
+    },
+    "class_type": "UltralyticsDetectorProvider",
+    "_meta": {
+      "title": "Ultralytics Detector (face)"
+    }
+  },
+  "10": {
+    "inputs": {
+      "bbox_threshold": 0.5,
+      "bbox_dilation": 10,
+      "crop_factor": 3.0,
+      "drop_size": 10,
+      "sub_threshold": 0.5,
+      "sub_dilation": 0,
+      "sub_bbox_expansion": 0,
+      "sam_mask_hint_threshold": 0.7,
+      "masking_mode": "Pivot SEGS",
+      "segs_pivot": "Combined mask",
+      "bbox_detector": [
+        "9",
+        0
+      ],
+      "image_frames": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "ImpactSimpleDetectorSEGS_for_AD",
+    "_meta": {
+      "title": "Simple Detector for Video (SEGS)"
+    }
+  },
+  "11": {
+    "inputs": {
+      "text": "perfect highly detailed face, realistic eyes",
+      "clip": [
+        "2",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Face Positive)"
+    }
+  },
+  "12": {
+    "inputs": {
+      "model": [
+        "2",
+        0
+      ],
+      "clip": [
+        "2",
+        1
+      ],
+      "vae": [
+        "2",
+        2
+      ],
+      "positive": [
+        "11",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "ToBasicPipe",
+    "_meta": {
+      "title": "ToBasicPipe (face detailer)"
+    }
+  },
+  "13": {
+    "inputs": {
+      "guide_size": 512,
+      "guide_size_for": true,
+      "max_size": 768,
+      "seed": 0,
+      "steps": 20,
+      "cfg": 8.0,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 0.5,
+      "refiner_ratio": 0.2,
+      "image_frames": [
+        "7",
+        0
+      ],
+      "segs": [
+        "10",
+        0
+      ],
+      "basic_pipe": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "SEGSDetailerForAnimateDiff",
+    "_meta": {
+      "title": "SEGSDetailer (face refine)"
+    }
+  },
+  "14": {
+    "inputs": {
+      "feather": 5,
+      "alpha": 255,
+      "image": [
+        "7",
+        0
+      ],
+      "segs": [
+        "13",
+        0
+      ]
+    },
+    "class_type": "SEGSPaste",
+    "_meta": {
+      "title": "SEGS Paste (face refine)"
+    }
+  }
+}

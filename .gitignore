@@ -1,0 +1,82 @@
+# ── Segredos e credenciais ──────────────────────────
+.env
+*.cookies.txt
+**/cookies.txt
+www.youtube.com_cookies.txt
+youtube_cookies.txt
+
+# ── Arquivos do usuário (conteúdo privado) ──────────
+links.txt
+*.info.json
+
+# ── Saídas e temporários do pipeline ────────────────
+temp/
+resultados/
+legendas/
+data/
+*.mp4
+*.mp3
+*.wav
+*.m4a
+*.aac
+*.flac
+*.srt
+*.ass
+*.zip
+*.txt.gz
+
+# ── Binários / pacotes pesados ──────────────────────
+*.deb
+*.rpm
+*.exe
+*.msi
+*.bin
+
+# ── Python ──────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+sdist/
+wheels/
+*.manifest
+*.spec
+pip-wheel-metadata/
+share/python-wheels/
+
+# ── Ambientes virtuais ──────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+
+# ── Ferramentas de QA / cache ───────────────────────
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+coverage.xml
+*.cover
+
+# ── IDE / editor ────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Misc ────────────────────────────────────────────
+**/New folder/
+*.log
