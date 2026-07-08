@@ -11,6 +11,7 @@ import subprocess
 import sys
 import uuid
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 _log = logging.getLogger("ytdlp_download")
@@ -71,10 +72,12 @@ def _ytdlp_cmd_runnable(cmd: list[str]) -> bool:
     return proc.returncode == 0
 
 
-def resolve_ytdlp_cmd() -> list[str] | None:
+@lru_cache(maxsize=1)
+def resolve_ytdlp_cmd() -> tuple[str, ...] | None:
     """
     Prefixo argv para invocar yt-dlp: script, `python -m yt_dlp` ou binário no PATH.
     Valida com `--version` para ignorar scripts com shebang quebrado (venv movido de pasta).
+    Retorna tuple (hashable) para permitir cache com @lru_cache.
     """
     for key in ("YTDLP_PATH", "YT_DLP_PATH"):
         raw = (os.getenv(key) or "").strip()
@@ -83,7 +86,7 @@ def resolve_ytdlp_cmd() -> list[str] | None:
             if p.is_file():
                 cmd = [str(p.resolve())]
                 if _ytdlp_cmd_runnable(cmd):
-                    return cmd
+                    return tuple(cmd)
     # Não usar .resolve() no executável: em venv o python costuma ser symlink para /usr/bin,
     # e resolve() faria procurar yt-dlp no sistema (versão antiga) em vez de .venv/bin/yt-dlp.
     base = Path(sys.executable).expanduser().parent
@@ -92,15 +95,15 @@ def resolve_ytdlp_cmd() -> list[str] | None:
         if cand.is_file():
             cmd = [str(cand.resolve())]
             if _ytdlp_cmd_runnable(cmd):
-                return cmd
+                return tuple(cmd)
     mod_cmd = [sys.executable, "-m", "yt_dlp"]
     if _ytdlp_cmd_runnable(mod_cmd):
-        return mod_cmd
+        return tuple(mod_cmd)
     w = shutil.which("yt-dlp")
     if w:
         cmd = [str(Path(w).resolve())]
         if _ytdlp_cmd_runnable(cmd):
-            return cmd
+            return tuple(cmd)
     return None
 
 
@@ -109,7 +112,7 @@ def resolve_ytdlp_executable() -> str | None:
     cmd = resolve_ytdlp_cmd()
     if not cmd:
         return None
-    if len(cmd) >= 3 and cmd[1:3] == ["-m", "yt_dlp"]:
+    if len(cmd) >= 3 and cmd[1:3] == ("-m", "yt_dlp"):
         return f"{cmd[0]} -m yt_dlp"
     return cmd[0]
 

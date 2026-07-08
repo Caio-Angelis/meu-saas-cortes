@@ -410,6 +410,7 @@ def generate_tiktok_post_caption(
             rate_limit_message=(
                 "Groq rate limit excedido ao gerar legenda de postagem. Tente novamente."
             ),
+            model="llama-3.1-8b-instant",
         )
         content = llm_text or ""
         obj_txt = _extract_json_object(content)

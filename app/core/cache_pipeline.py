@@ -78,7 +78,7 @@ def load_cached_translated_segments(
     segments: list[dict],
 ) -> list[dict] | None:
     compact = _segments_compact(segments)
-    key = key_hash("translated_segments", video_fp, clip_index, target, compact)
+    key = key_hash("translated_segments", video_fp, target, compact)
     p = cache_path("translations", key)
     data = read_json(p)
     return data if isinstance(data, list) else None
@@ -93,6 +93,6 @@ def save_cached_translated_segments(
     translated: list[dict],
 ) -> None:
     compact = _segments_compact(input_segments)
-    key = key_hash("translated_segments", video_fp, clip_index, target, compact)
+    key = key_hash("translated_segments", video_fp, target, compact)
     p = cache_path("translations", key)
     write_json(p, translated)

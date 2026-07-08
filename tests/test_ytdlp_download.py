@@ -50,8 +50,9 @@ def test_resolve_ytdlp_cmd_falls_back_to_module(monkeypatch) -> None:
         lambda cmd: len(cmd) >= 3 and cmd[1:3] == ["-m", "yt_dlp"],
     )
     monkeypatch.setattr(ytdl.sys, "executable", "/fake/venv/bin/python")
+    ytdl.resolve_ytdlp_cmd.cache_clear()
     cmd = resolve_ytdlp_cmd()
-    assert cmd == ["/fake/venv/bin/python", "-m", "yt_dlp"]
+    assert cmd == ("/fake/venv/bin/python", "-m", "yt_dlp")
 
 
 def test_collect_urls_dedupes() -> None:

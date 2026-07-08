@@ -66,26 +66,35 @@ def _probe_duration_seconds(path: str) -> float:
     return float(json.loads(r.stdout)["format"]["duration"])
 
 
-def _extract_audio_chunk(source: str, dest: str, start: float, duration: float) -> None:
-    """Fatia áudio com cópia de stream quando possível (evita re-encode mp3→mp3)."""
+def _extract_audio_chunk(source: str, dest: str, start: float, duration: float, *, from_video: bool = False) -> None:
+    """Fatia áudio com cópia de stream quando possível (evita re-encode mp3→mp3).
+    Quando from_video=True, re-encoda para MP3 16kHz mono (compatível com Whisper)."""
+    cmd = [
+        FFMPEG_PATH,
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-ss",
+        str(start),
+        "-i",
+        source,
+        "-t",
+        str(duration),
+        "-vn",
+    ]
+    if from_video:
+        cmd.extend([
+            "-acodec", "libmp3lame",
+            "-ar", "16000",
+            "-ac", "1",
+            "-b:a", "32k",
+        ])
+    else:
+        cmd.extend(["-c:a", "copy"])
+    cmd.append(dest)
     run_cancelable(
-        [
-            FFMPEG_PATH,
-            "-y",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-ss",
-            str(start),
-            "-i",
-            source,
-            "-t",
-            str(duration),
-            "-vn",
-            "-c:a",
-            "copy",
-            dest,
-        ],
+        cmd,
         capture_output=True,
         text=True,
         check=True,
@@ -126,13 +135,14 @@ def _segments_cover_audio(segments: list[dict], duration: float, *, slack_sec: f
 
 
 def _transcribe_chunk_at(
-    audio_path: str, start: float, piece_dur: float, language: str | None
+    audio_path: str, start: float, piece_dur: float, language: str | None,
+    *, from_video: bool = False,
 ) -> tuple[float, list[dict]]:
     tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
     tmp_path = tmp.name
     tmp.close()
     try:
-        _extract_audio_chunk(audio_path, tmp_path, start, piece_dur)
+        _extract_audio_chunk(audio_path, tmp_path, start, piece_dur, from_video=from_video)
         part = _transcribe_file(tmp_path, language)
         out: list[dict] = []
         for s in part:
@@ -153,6 +163,7 @@ def _transcribe_chunks_parallel(
     chunk_ranges: list[tuple[float, float]],
     language: str | None,
     max_workers: int,
+    *, from_video: bool = False,
 ) -> list[dict]:
     if not chunk_ranges:
         return []
@@ -176,7 +187,7 @@ def _transcribe_chunks_parallel(
                     start,
                     start + piece_dur,
                 )
-            _, part = _transcribe_chunk_at(audio_path, start, piece_dur, language)
+            _, part = _transcribe_chunk_at(audio_path, start, piece_dur, language, from_video=from_video)
             all_segments.extend(part)
         all_segments.sort(key=lambda x: float(x["start"]))
         return all_segments
@@ -184,7 +195,7 @@ def _transcribe_chunks_parallel(
     by_start: dict[float, list[dict]] = {}
     with ThreadPoolExecutor(max_workers=workers) as ex:
         futs = [
-            ex.submit(_transcribe_chunk_at, audio_path, start, piece_dur, language)
+            ex.submit(_transcribe_chunk_at, audio_path, start, piece_dur, language, from_video=from_video)
             for start, piece_dur in chunk_ranges
         ]
         for fut in as_completed(futs):
@@ -199,10 +210,12 @@ def _transcribe_chunks_parallel(
     return all_segments
 
 
-def transcribe_audio(audio_path: str, language: str = None) -> list[dict]:
+def transcribe_audio(audio_path: str, language: str = None, *, source_video_path: str | None = None) -> list[dict]:
     """
     Transcreve o áudio inteiro com timestamps. Áudio longo é fatiado: uma única chamada
     ao Whisper costuma devolver só os primeiros ~1 min de segmentos.
+    Quando source_video_path é fornecido e o áudio é longo, fatia diretamente do vídeo
+    (pula a extração de MP3 intermediário).
     """
     if not os.path.exists(audio_path):
         raise FileNotFoundError(f"Áudio não encontrado: {audio_path}")
@@ -248,4 +261,5 @@ def transcribe_audio(audio_path: str, language: str = None) -> list[dict]:
         chunk_ranges,
         language,
         GROQ_TRANSCRIBE_MAX_WORKERS,
+        from_video=source_video_path is not None,
     )

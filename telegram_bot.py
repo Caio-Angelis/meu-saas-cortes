@@ -35,6 +35,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from app.core.config import (
+    DOWNLOAD_MAX_WORKERS,
     EDGE_TTS_VOICE_PT,
     TELEGRAM_ALLOWED_USER_ID,
     TELEGRAM_BOT_TOKEN,
@@ -327,7 +328,7 @@ def _run_cortes_in_thread(
 
     if urls:
         n_u = len(urls)
-        max_workers = max(1, min(3, n_u))
+        max_workers = max(1, min(DOWNLOAD_MAX_WORKERS, n_u))
         _log.info("A baixar %s URL(s) com yt-dlp (workers=%s)", n_u, max_workers)
 
         def _dl(idx_url: tuple[int, str]) -> tuple[int, str, object]:

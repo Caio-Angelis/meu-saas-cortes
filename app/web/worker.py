@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
-from app.core.config import OUTPUT_DIR, TEMP_DIR
+from app.core.config import DOWNLOAD_MAX_WORKERS, OUTPUT_DIR, TEMP_DIR
 from app.gui.gui_export import export_cortes_zip
 from app.core.logging_setup import gui_pipeline_log_redirect
 from app.pipelines.cortes.pipeline import run_pipeline
@@ -47,7 +47,7 @@ def _download_urls(
         return [], {}
     store = get_store() if item_id is not None else None
     n_u = len(urls)
-    max_workers = max(1, min(3, n_u))
+    max_workers = max(1, min(DOWNLOAD_MAX_WORKERS, n_u))
     hub.publish_log(f"A baixar {n_u} URL(s) (até {max_workers} em paralelo)…")
     source_by_path: dict[str, VideoSourceAttribution] = {}
 

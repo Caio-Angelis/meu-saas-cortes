@@ -96,17 +96,21 @@ def _write_run_manifest(
 
 
 def _segments_for_clip(
-    segments: list[dict], clip_start: float, clip_end: float
+    segments: list[dict], clip_start: float, clip_end: float, *, precomputed: tuple[list[float], list[float]] | None = None
 ) -> list[dict]:
     """
     Segmentos que intersectam [clip_start, clip_end], com tempos limitados ao clipe.
     Inclui falas cortadas na borda do corte viral (antes só entravam segmentos 100% dentro
     da janela, o que sumia o começo/fim das frases e fazia legenda/dublagem 'pular').
+    `precomputed`: (starts, ends) pré-calculados para evitar reconstrução por clipe.
     """
     if not segments:
         return []
-    starts = [float(s["start"]) for s in segments]
-    ends = [float(s["end"]) for s in segments]
+    if precomputed is not None:
+        starts, ends = precomputed
+    else:
+        starts = [float(s["start"]) for s in segments]
+        ends = [float(s["end"]) for s in segments]
     i0 = bisect.bisect_right(ends, clip_start)
     i1 = bisect.bisect_left(starts, clip_end) - 1
     if i0 > i1:
@@ -176,11 +180,12 @@ def _process_clip_task(
     dub_to: str | None,
     tts_voice: str | None,
     source_attribution: VideoSourceAttribution | None = None,
+    precomputed_se: tuple[list[float], list[float]] | None = None,
 ) -> str:
     start, end = moment["start"], moment["end"]
     use_gpu = _clip_uses_gpu_encoder(clip_index, total_clips)
 
-    clip_segments = _segments_for_clip(segments, start, end)
+    clip_segments = _segments_for_clip(segments, start, end, precomputed=precomputed_se)
     translated = load_cached_translated_segments(
         video_fp=video_fp,
         clip_index=clip_index,
@@ -230,88 +235,99 @@ def _process_clip_task(
         clip_index,
         total_clips,
     )
-    with ThreadPoolExecutor(max_workers=1) as caption_pool:
-        cap_future = caption_pool.submit(
-            generate_tiktok_post_caption,
-            clip_plain_for_caption,
-            target_language,
-            hook=moment.get("hook") or None,
-        )
-        sem = _gpu_enc_sem if use_gpu else _cpu_enc_sem
-        with sem:
-            _log.info(
-                "Clipe %s/%s: a cortar o trecho e a queimar legendas no vídeo (FFmpeg)…",
-                clip_index,
-                total_clips,
-            )
-            cut_and_burn_subtitles(
-                video_path,
-                start,
-                end,
-                srt_path,
-                burned_out,
-                posicao,
-                fonte,
-                cor_letra,
-                cor_fundo,
-                opacidade,
-                hook_phrase=moment.get("hook") or None,
-                target_language=target_language,
-                use_gpu_encoder=use_gpu,
-            )
+    cap_holder: list[str | None] = [None]
+    cap_error: list[BaseException | None] = [None]
 
-        if dub_to:
-            _log.info(
-                "Clipe %s/%s: dublagem em %s (Edge-TTS + mux)…",
-                clip_index,
-                total_clips,
-                dub_to,
+    def _caption_worker() -> None:
+        try:
+            cap_holder[0] = generate_tiktok_post_caption(
+                clip_plain_for_caption,
+                target_language,
+                hook=moment.get("hook") or None,
             )
-            segments_dub = load_cached_translated_segments(
+        except BaseException as e:
+            cap_error[0] = e
+
+    cap_thread = threading.Thread(target=_caption_worker, daemon=True)
+    cap_thread.start()
+    sem = _gpu_enc_sem if use_gpu else _cpu_enc_sem
+    with sem:
+        _log.info(
+            "Clipe %s/%s: a cortar o trecho e a queimar legendas no vídeo (FFmpeg)…",
+            clip_index,
+            total_clips,
+        )
+        cut_and_burn_subtitles(
+            video_path,
+            start,
+            end,
+            srt_path,
+            burned_out,
+            posicao,
+            fonte,
+            cor_letra,
+            cor_fundo,
+            opacidade,
+            hook_phrase=moment.get("hook") or None,
+            target_language=target_language,
+            use_gpu_encoder=use_gpu,
+        )
+
+    if dub_to:
+        _log.info(
+            "Clipe %s/%s: dublagem em %s (Edge-TTS + mux)…",
+            clip_index,
+            total_clips,
+            dub_to,
+        )
+        segments_dub = load_cached_translated_segments(
+            video_fp=video_fp,
+            clip_index=clip_index,
+            target=dub_to,
+            segments=clip_segments,
+        )
+        if segments_dub is None:
+            segments_dub = translate_segments(clip_segments, source="auto", target=dub_to)
+            save_cached_translated_segments(
                 video_fp=video_fp,
                 clip_index=clip_index,
                 target=dub_to,
-                segments=clip_segments,
+                input_segments=clip_segments,
+                translated=segments_dub,
             )
-            if segments_dub is None:
-                segments_dub = translate_segments(clip_segments, source="auto", target=dub_to)
-                save_cached_translated_segments(
-                    video_fp=video_fp,
-                    clip_index=clip_index,
-                    target=dub_to,
-                    input_segments=clip_segments,
-                    translated=segments_dub,
-                )
-            dub_audio = str(TEMP_DIR / f"{video_name}_clip_{clip_index}_dub.m4a")
-            if dub_to == "pt":
-                build_portuguese_dub_audio(
-                    segments_dub,
-                    start,
-                    end,
-                    playback_speed,
-                    dub_audio,
-                    voice=tts_voice,
-                    temp_tag=f"{video_name}_{clip_index}",
-                )
-            else:
-                build_english_dub_audio(
-                    segments_dub,
-                    start,
-                    end,
-                    playback_speed,
-                    dub_audio,
-                    voice=tts_voice,
-                    temp_tag=f"{video_name}_{clip_index}",
-                )
-            muxed = str(TEMP_DIR / f"{video_name}_clip_{clip_index}_dub_muxed.mp4")
-            mux_video_with_new_audio(burned_out, dub_audio, muxed)
-            if DUB_TRIM_SILENCE:
-                remove_long_silence_from_video(muxed, final_path)
-            else:
-                shutil.copyfile(muxed, final_path)
-            _cleanup(burned_out, dub_audio, muxed)
+        dub_audio = str(TEMP_DIR / f"{video_name}_clip_{clip_index}_dub.m4a")
+        if dub_to == "pt":
+            build_portuguese_dub_audio(
+                segments_dub,
+                start,
+                end,
+                playback_speed,
+                dub_audio,
+                voice=tts_voice,
+                temp_tag=f"{video_name}_{clip_index}",
+            )
+        else:
+            build_english_dub_audio(
+                segments_dub,
+                start,
+                end,
+                playback_speed,
+                dub_audio,
+                voice=tts_voice,
+                temp_tag=f"{video_name}_{clip_index}",
+            )
+        muxed = str(TEMP_DIR / f"{video_name}_clip_{clip_index}_dub_muxed.mp4")
+        mux_video_with_new_audio(burned_out, dub_audio, muxed)
+        if DUB_TRIM_SILENCE:
+            remove_long_silence_from_video(muxed, final_path)
+        else:
+            shutil.copyfile(muxed, final_path)
+        _cleanup(burned_out, dub_audio, muxed)
 
-        caption_text = cap_future.result()
+    cap_thread.join()
+    if cap_error[0] is not None:
+        raise cap_error[0]
+    caption_text = cap_holder[0] or ""
 
     caption_text = append_source_attribution_to_caption(
         caption_text,
@@ -353,7 +369,7 @@ def _prepare_transcription_and_moments(
         raise_if_cancelled()
         _log.info("[2/5] A transcrever o áudio (Groq Whisper)…")
         _safe_progress(progress_local, 0.12)
-        segments = transcribe_audio(audio_path)
+        segments = transcribe_audio(audio_path, source_video_path=video_path)
         _cleanup(audio_path)
         save_cached_segments(video_fp, segments, transcribe_opts=transcribe_opts)
         _safe_progress(progress_local, 0.48)
@@ -440,6 +456,13 @@ def _run_clip_stage(
             _log.info("Manifest salvo: %s", manifest)
         return []
 
+    precomputed_se: tuple[list[float], list[float]] | None = None
+    if segments:
+        precomputed_se = (
+            [float(s["start"]) for s in segments],
+            [float(s["end"]) for s in segments],
+        )
+
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futs: dict[Future, int] = {}
         for clip_index in range(1, n + 1):
@@ -461,6 +484,7 @@ def _run_clip_stage(
                 dub_to,
                 tts_voice,
                 source_attribution,
+                precomputed_se,
             )
             futs[fut] = clip_index
         results_by_idx: dict[int, str] = {}
@@ -585,7 +609,7 @@ def run_pipeline(
 
             return scope_local
 
-        with ThreadPoolExecutor(max_workers=1) as prep_pool:
+        with ThreadPoolExecutor(max_workers=2) as prep_pool:
             for i, vp in enumerate(videos):
                 stem = Path(vp).stem
                 count = used_names.get(stem, 0) + 1

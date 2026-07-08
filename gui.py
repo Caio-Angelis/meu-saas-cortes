@@ -41,7 +41,7 @@ from typing import NamedTuple
 _ROOT = Path(__file__).resolve().parent
 os.chdir(_ROOT)
 
-from app.core.config import EDGE_TTS_VOICE_PT, OUTPUT_DIR, TEMP_DIR
+from app.core.config import DOWNLOAD_MAX_WORKERS, EDGE_TTS_VOICE_PT, OUTPUT_DIR, TEMP_DIR
 from app.tts.gemini_tts import gemini_tts_available
 from app.tts.local_tts import local_tts_available
 from app.tts.tts_voices import (
@@ -79,10 +79,11 @@ class _GuiTheme(NamedTuple):
     urls_inset_bg: str
 
 
-# Espaçamento visual (px): micro / próximo / seção
-_PX_MICRO = 5
-_PX_NEAR = 10
-_PX_SECTION = 20
+# Espaçamento visual (px): micro / próximo / seção / hero
+_PX_MICRO = 6
+_PX_NEAR = 12
+_PX_SECTION = 24
+_PX_HERO = 32
 
 # Texto de placeholder da área de URLs (uma linha; cor aplicada via hint)
 _URLS_PLACEHOLDER = (
@@ -98,7 +99,17 @@ _URLS_HELP_TEXT = (
 )
 
 # Cinza extra-apagado para notas curtas (fora do token hint do tema)
-_MUTED_NOTE_FG = "#5c6370"
+_MUTED_NOTE_FG = "#6b7280"
+
+# Colas da barra lateral (sidebar) e barra de status — sempre escuro
+_SIDEBAR_BG = "#111827"
+_SIDEBAR_HOVER = "#1e293b"
+_SIDEBAR_ACTIVE = "#0891b2"
+_SIDEBAR_FG = "#94a3b8"
+_SIDEBAR_ACTIVE_FG = "#f0fdfa"
+_STATUS_BG = "#0f172a"
+_STATUS_FG = "#64748b"
+_CARD_BORDER = "#1e293b"
 
 # Ícones Unicode (fallback sem dependência extra; fontes do sistema costumam renderizar)
 _IC_VIDEO = "\u25b6"  # ▶
@@ -271,6 +282,49 @@ def _configure_modern_theme(root: tk.Tk) -> _GuiTheme:
         style.configure("TCheckbutton", padding=(_PX_NEAR, _PX_MICRO))
         style.configure("Horizontal.TScale", padding=(_PX_MICRO, _PX_NEAR))
 
+        # Sidebar buttons (flat, full-width, left-aligned)
+        style.configure(
+            "Sidebar.TButton",
+            background=_SIDEBAR_BG,
+            foreground=_SIDEBAR_FG,
+            font=("Segoe UI", 10),
+            padding=(_PX_SECTION, _PX_NEAR),
+            anchor="w",
+            relief="flat",
+            borderwidth=0,
+        )
+        style.map(
+            "Sidebar.TButton",
+            background=[("active", _SIDEBAR_HOVER), ("pressed", _SIDEBAR_HOVER)],
+            foreground=[("active", "#e2e8f0")],
+        )
+        style.configure(
+            "SidebarActive.TButton",
+            background=_SIDEBAR_ACTIVE,
+            foreground=_SIDEBAR_ACTIVE_FG,
+            font=("Segoe UI Semibold", 10),
+            padding=(_PX_SECTION, _PX_NEAR),
+            anchor="w",
+            relief="flat",
+            borderwidth=0,
+        )
+        style.map(
+            "SidebarActive.TButton",
+            background=[("active", "#0e7490"), ("pressed", "#155e75")],
+        )
+
+        # Status bar
+        style.configure("Status.TLabel", background=_STATUS_BG, foreground=_STATUS_FG, font=("Segoe UI", 9))
+        style.configure("Status.TFrame", background=_STATUS_BG)
+
+        # Notebook tabs — flatter, more modern
+        style.configure("TNotebook", borderwidth=0, padding=0)
+        style.configure(
+            "TNotebook.Tab",
+            padding=(_PX_SECTION, _PX_NEAR),
+            font=("Segoe UI", 10),
+        )
+
         return _GuiTheme(
             text_bg=tb,
             text_fg=tf,
@@ -286,13 +340,13 @@ def _configure_modern_theme(root: tk.Tk) -> _GuiTheme:
     except ImportError:
         style = ttk.Style(root)
         style.theme_use("clam")
-        bg = "#0d1117"
-        card = "#161b22"
-        fg = "#e6edf3"
-        hint = "#8b949e"
-        accent = "#38bdf8"
-        btn_bg = "#21262d"
-        inset = "#12161d"
+        bg = "#0f172a"
+        card = "#1e293b"
+        fg = "#e2e8f0"
+        hint = "#94a3b8"
+        accent = "#22d3ee"
+        btn_bg = "#334155"
+        inset = "#0f172a"
         root.configure(background=bg)
         style.configure(".", background=bg, foreground=fg)
         style.configure("TFrame", background=bg)
@@ -309,7 +363,7 @@ def _configure_modern_theme(root: tk.Tk) -> _GuiTheme:
             "Heading.TLabel",
             background=bg,
             foreground=fg,
-            font=("Segoe UI", 11, "bold"),
+            font=("Segoe UI", 12, "bold"),
         )
         style.configure(
             "Subheading.TLabel",
@@ -327,8 +381,8 @@ def _configure_modern_theme(root: tk.Tk) -> _GuiTheme:
         )
         style.map(
             "TButton",
-            background=[("active", "#30363d"), ("pressed", "#161b22"), ("disabled", "#21262d")],
-            foreground=[("disabled", "#484f58")],
+            background=[("active", "#475569"), ("pressed", "#1e293b"), ("disabled", "#334155")],
+            foreground=[("disabled", "#64748b")],
         )
         style.configure(
             "Accent.TButton",
@@ -341,8 +395,8 @@ def _configure_modern_theme(root: tk.Tk) -> _GuiTheme:
         )
         style.map(
             "Accent.TButton",
-            background=[("active", "#06b6d4"), ("pressed", "#0e7490"), ("disabled", "#21262d")],
-            foreground=[("disabled", "#8b949e")],
+            background=[("active", "#06b6d4"), ("pressed", "#0e7490"), ("disabled", "#334155")],
+            foreground=[("disabled", "#94a3b8")],
         )
         style.configure("TCheckbutton", background=bg, foreground=fg, padding=(_PX_NEAR, _PX_MICRO))
         style.configure("TEntry", fieldbackground=card, foreground=fg, insertcolor=fg)
@@ -371,8 +425,60 @@ def _configure_modern_theme(root: tk.Tk) -> _GuiTheme:
             foreground=[("selected", "#f0fdfa")],
         )
         style.configure("TPanedwindow", background=bg)
-        style.configure("TSeparator", background="#30363d")
+        style.configure("TSeparator", background="#334155")
         style.configure("Horizontal.TScale", background=bg, troughcolor=btn_bg)
+
+        # Sidebar buttons
+        style.configure(
+            "Sidebar.TButton",
+            background=_SIDEBAR_BG,
+            foreground=_SIDEBAR_FG,
+            font=("Segoe UI", 10),
+            padding=(_PX_SECTION, _PX_NEAR),
+            anchor="w",
+            relief="flat",
+            borderwidth=0,
+        )
+        style.map(
+            "Sidebar.TButton",
+            background=[("active", _SIDEBAR_HOVER), ("pressed", _SIDEBAR_HOVER)],
+            foreground=[("active", "#e2e8f0")],
+        )
+        style.configure(
+            "SidebarActive.TButton",
+            background=_SIDEBAR_ACTIVE,
+            foreground=_SIDEBAR_ACTIVE_FG,
+            font=("Segoe UI", 10, "bold"),
+            padding=(_PX_SECTION, _PX_NEAR),
+            anchor="w",
+            relief="flat",
+            borderwidth=0,
+        )
+        style.map(
+            "SidebarActive.TButton",
+            background=[("active", "#0e7490"), ("pressed", "#155e75")],
+        )
+
+        # Status bar
+        style.configure("Status.TLabel", background=_STATUS_BG, foreground=_STATUS_FG, font=("Segoe UI", 9))
+        style.configure("Status.TFrame", background=_STATUS_BG)
+
+        # Notebook tabs — flatter, more modern
+        style.configure("TNotebook", borderwidth=0, padding=0, background=bg)
+        style.configure(
+            "TNotebook.Tab",
+            background=bg,
+            foreground=hint,
+            padding=(_PX_SECTION, _PX_NEAR),
+            font=("Segoe UI", 10),
+            borderwidth=0,
+        )
+        style.map(
+            "TNotebook.Tab",
+            background=[("selected", card), ("active", btn_bg)],
+            foreground=[("selected", accent)],
+        )
+
         return _GuiTheme(
             text_bg=card,
             text_fg=fg,
@@ -441,15 +547,17 @@ class CortesApp(tk.Tk):
         self._is_dark_theme = self._theme.is_dark
         self._log_fg = self._theme.log_fg
         self._urls_ph_visible = False
+        self._sidebar_buttons: list[ttk.Button] = []
+        self._status_var = tk.StringVar(value="Pronto")
         try:
             st = ttk.Style(self)
             rbg = st.lookup("TFrame", "background")
             if rbg:
                 self.configure(background=rbg)
         except tk.TclError:
-            self.configure(background="#0d1117")
-        self.minsize(880, 620)
-        self.geometry("1100x860")
+            self.configure(background="#0f172a")
+        self.minsize(960, 680)
+        self.geometry("1200x900")
 
         self._video_path = tk.StringVar()
         self._video_paths: list[str] = []
@@ -520,13 +628,13 @@ class CortesApp(tk.Tk):
         card = ttk.Frame(
             parent,
             style=self._theme.card_style,
-            padding=(_PX_SECTION, _PX_SECTION - 2, _PX_SECTION, _PX_SECTION),
+            padding=(_PX_SECTION, _PX_SECTION - 4, _PX_SECTION, _PX_SECTION - 4),
         )
         card.pack(fill=tk.X, pady=(0, _PX_SECTION))
         head = ttk.Frame(card)
-        head.pack(fill=tk.X, pady=(0, _PX_NEAR))
+        head.pack(fill=tk.X, pady=(0, _PX_MICRO))
         ttk.Label(head, text=f"{icon}  {title}", style="Heading.TLabel").pack(anchor=tk.W)
-        ttk.Separator(card, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=(0, _PX_NEAR + 2))
+        ttk.Separator(card, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=(0, _PX_NEAR))
         body = ttk.Frame(card)
         body.pack(fill=tk.BOTH, expand=True)
         return body
@@ -575,6 +683,22 @@ class CortesApp(tk.Tk):
             return ""
         return full
 
+    def _set_status(self, text: str) -> None:
+        self._status_var.set(text)
+
+    def _select_sidebar_tab(self, index: int) -> None:
+        self._notebook.select(index)
+        for i, btn in enumerate(self._sidebar_buttons):
+            btn.configure(style="SidebarActive.TButton" if i == index else "Sidebar.TButton")
+
+    def _on_notebook_tab_changed(self, _event: tk.Event | None = None) -> None:
+        try:
+            idx = self._notebook.index(self._notebook.select())
+        except (tk.TclError, ValueError):
+            return
+        for i, btn in enumerate(self._sidebar_buttons):
+            btn.configure(style="SidebarActive.TButton" if i == idx else "Sidebar.TButton")
+
     def _build_ui(self) -> None:
         sec = self._theme.secondary_button_style
         cb_st = self._theme.checkbutton_style
@@ -585,35 +709,93 @@ class CortesApp(tk.Tk):
         )
         self._top_strip.pack(side=tk.TOP, fill=tk.X)
 
-        main = ttk.Frame(self, padding=(_PX_SECTION, _PX_SECTION, _PX_SECTION, _PX_SECTION + 2))
-        main.pack(fill=tk.BOTH, expand=True)
+        # --- Body: sidebar (left) + content (right) ---
+        body = ttk.Frame(self)
+        body.pack(fill=tk.BOTH, expand=True)
 
-        hdr = ttk.Frame(main)
-        hdr.pack(fill=tk.X, pady=(0, _PX_NEAR))
-        title_f = tkfont.Font(self, family=base["family"], size=24, weight="bold")
-        ttk.Label(hdr, text="Geradores de conteúdo", font=title_f).pack(anchor=tk.W)
-        ttk.Label(
-            hdr,
-            text="Cortes virais, quiz, batalha, história narrada ou locução MP3 — log e resultados compartilhados.",
-            style="Subheading.TLabel",
-            wraplength=720,
-        ).pack(anchor=tk.W, pady=(_PX_NEAR, 0))
+        # ===== Sidebar =====
+        sidebar = tk.Frame(body, width=220, bg=_SIDEBAR_BG, borderwidth=0, highlightthickness=0)
+        sidebar.pack(side=tk.LEFT, fill=tk.Y)
+        sidebar.pack_propagate(False)
 
-        ttk.Separator(main, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=(_PX_SECTION, _PX_NEAR))
+        # App title in sidebar
+        sp_top = tk.Frame(sidebar, bg=_SIDEBAR_BG, height=_PX_HERO + _PX_SECTION + 4)
+        sp_top.pack(fill=tk.X)
+        sp_top.pack_propagate(False)
+        title_f = tkfont.Font(self, family=base["family"], size=15, weight="bold")
+        tk.Label(
+            sp_top,
+            text="Studio Cortes",
+            font=title_f,
+            bg=_SIDEBAR_BG,
+            fg="#f0fdfa",
+            anchor=tk.W,
+            padx=_PX_SECTION,
+        ).pack(fill=tk.X, pady=(_PX_HERO, 0))
+        tk.Label(
+            sp_top,
+            text="Conteúdo viral com IA",
+            bg=_SIDEBAR_BG,
+            fg=_SIDEBAR_FG,
+            font=(base["family"], 8),
+            anchor=tk.W,
+            padx=_PX_SECTION,
+        ).pack(fill=tk.X, pady=(_PX_MICRO, 0))
 
-        self._notebook = ttk.Notebook(main)
-        self._notebook.pack(fill=tk.X, expand=False, pady=(0, _PX_SECTION))
+        # Nav buttons
+        nav_data = [
+            (f"{_IC_VIDEO}  Cortes Virais", 0),
+            (f"{_IC_QUIZ}  Máquina de Quizzes", 1),
+            (f"{_IC_BATALHA}  Batalha 1v1", 2),
+            (f"{_IC_HISTORIA}  História", 3),
+            (f"{_IC_SPEAKER}  Text-to-Speech", 4),
+        ]
+        nav_wrap = tk.Frame(sidebar, bg=_SIDEBAR_BG)
+        nav_wrap.pack(fill=tk.X, pady=(_PX_SECTION, 0))
+        for label, idx in nav_data:
+            btn = ttk.Button(
+                nav_wrap,
+                text=label,
+                command=lambda i=idx: self._select_sidebar_tab(i),
+                style="SidebarActive.TButton" if idx == 0 else "Sidebar.TButton",
+            )
+            btn.pack(fill=tk.X, pady=(0, 2))
+            self._sidebar_buttons.append(btn)
 
-        tab_cortes = ttk.Frame(self._notebook, padding=(_PX_NEAR, _PX_NEAR, _PX_NEAR, _PX_SECTION))
-        tab_quiz = ttk.Frame(self._notebook, padding=(_PX_NEAR, _PX_NEAR, _PX_NEAR, _PX_SECTION))
-        tab_batalha = ttk.Frame(self._notebook, padding=(_PX_NEAR, _PX_NEAR, _PX_NEAR, _PX_SECTION))
-        tab_historia = ttk.Frame(self._notebook, padding=(_PX_NEAR, _PX_NEAR, _PX_NEAR, _PX_SECTION))
-        tab_tts = ttk.Frame(self._notebook, padding=(_PX_NEAR, _PX_NEAR, _PX_NEAR, _PX_SECTION))
-        self._notebook.add(tab_cortes, text=f"{_IC_VIDEO}  Cortes Virais")
-        self._notebook.add(tab_quiz, text=f"{_IC_QUIZ}  Máquina de Quizzes")
-        self._notebook.add(tab_batalha, text=f"{_IC_BATALHA}  Batalha 1v1")
-        self._notebook.add(tab_historia, text=f"{_IC_HISTORIA}  História")
-        self._notebook.add(tab_tts, text=f"{_IC_SPEAKER}  Text-to-Speech")
+        # Spacer + utility buttons at bottom of sidebar
+        tk.Frame(sidebar, bg=_SIDEBAR_BG).pack(fill=tk.BOTH, expand=True)
+        bottom_wrap = tk.Frame(sidebar, bg=_SIDEBAR_BG, padx=_PX_SECTION, pady=_PX_SECTION)
+        bottom_wrap.pack(fill=tk.X, side=tk.BOTTOM)
+        ttk.Button(
+            bottom_wrap,
+            text=f"{_IC_FOLDER}  Abrir resultados",
+            command=lambda: _open_folder(OUTPUT_DIR),
+            style=sec,
+        ).pack(fill=tk.X, pady=(0, _PX_MICRO))
+        ttk.Button(
+            bottom_wrap,
+            text=f"{_IC_LOG}  Limpar log",
+            command=self._clear_log,
+            style=sec,
+        ).pack(fill=tk.X)
+
+        # ===== Content area =====
+        content = ttk.Frame(body, padding=(_PX_SECTION, _PX_SECTION, _PX_SECTION, _PX_SECTION))
+        content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        self._notebook = ttk.Notebook(content)
+        self._notebook.pack(fill=tk.BOTH, expand=True)
+
+        tab_cortes = ttk.Frame(self._notebook, padding=(_PX_SECTION, _PX_NEAR, _PX_SECTION, _PX_SECTION))
+        tab_quiz = ttk.Frame(self._notebook, padding=(_PX_SECTION, _PX_NEAR, _PX_SECTION, _PX_SECTION))
+        tab_batalha = ttk.Frame(self._notebook, padding=(_PX_SECTION, _PX_NEAR, _PX_SECTION, _PX_SECTION))
+        tab_historia = ttk.Frame(self._notebook, padding=(_PX_SECTION, _PX_NEAR, _PX_SECTION, _PX_SECTION))
+        tab_tts = ttk.Frame(self._notebook, padding=(_PX_SECTION, _PX_NEAR, _PX_SECTION, _PX_SECTION))
+        self._notebook.add(tab_cortes, text=f"  {_IC_VIDEO}  Cortes Virais  ")
+        self._notebook.add(tab_quiz, text=f"  {_IC_QUIZ}  Quiz  ")
+        self._notebook.add(tab_batalha, text=f"  {_IC_BATALHA}  Batalha  ")
+        self._notebook.add(tab_historia, text=f"  {_IC_HISTORIA}  História  ")
+        self._notebook.add(tab_tts, text=f"  {_IC_SPEAKER}  TTS  ")
 
         self._build_tab_cortes(tab_cortes, sec=sec, base=base)
         self._build_tab_quiz(tab_quiz, sec=sec, base=base)
@@ -621,16 +803,14 @@ class CortesApp(tk.Tk):
         self._build_tab_historia(tab_historia, sec=sec, base=base)
         self._build_tab_tts(tab_tts, sec=sec, base=base)
 
-        # --- Execução global (cancelar, progresso, pós-processo) ---
-        f_run_body = self._make_section(main, "Execução", _IC_RUN)
+        self._notebook.bind("<<NotebookTabChanged>>", self._on_notebook_tab_changed)
+
+        # --- Execução global (cancelar, progresso) ---
+        f_run_body = self._make_section(content, "Execução", _IC_RUN)
         f_primary = ttk.Frame(f_run_body)
         f_primary.pack(fill=tk.X, pady=(0, _PX_NEAR))
-        ttk.Frame(f_primary).pack(side=tk.LEFT, expand=True)
-        center_run = ttk.Frame(f_primary)
-        center_run.pack(side=tk.LEFT)
-        ttk.Frame(f_primary).pack(side=tk.LEFT, expand=True)
         self._btn_cancel = ttk.Button(
-            center_run,
+            f_primary,
             text="Cancelar processamento",
             command=self._cancel_pipeline,
             state=tk.DISABLED,
@@ -638,33 +818,15 @@ class CortesApp(tk.Tk):
         )
         self._btn_cancel.pack(side=tk.LEFT)
 
-        f_secondary = ttk.Frame(f_run_body)
-        f_secondary.pack(fill=tk.X, pady=(_PX_NEAR + 2, 0))
-        ttk.Frame(f_secondary).pack(side=tk.LEFT, expand=True)
-        mid_util = ttk.Frame(f_secondary)
-        mid_util.pack(side=tk.LEFT)
-        ttk.Frame(f_secondary).pack(side=tk.LEFT, expand=True)
-        ttk.Button(
-            mid_util,
-            text=f"{_IC_FOLDER}  Abrir pasta de resultados",
-            command=lambda: _open_folder(OUTPUT_DIR),
-            style=sec,
-        ).pack(side=tk.LEFT, padx=_PX_MICRO)
-        ttk.Button(
-            mid_util,
-            text=f"{_IC_LOG}  Limpar log",
-            command=self._clear_log,
-            style=sec,
-        ).pack(side=tk.LEFT, padx=_PX_MICRO)
-
-        prog_wrap = ttk.Frame(f_secondary)
-        prog_wrap.pack(fill=tk.X, pady=(_PX_NEAR + 4, 0))
+        prog_wrap = ttk.Frame(f_run_body)
+        prog_wrap.pack(fill=tk.X, pady=(_PX_NEAR, 0))
         track_bg = "#1f252d" if self._is_dark_theme else "#d8dee9"
         self._prog_track = tk.Frame(prog_wrap, height=8, bg=track_bg, highlightthickness=0)
         self._prog_track.pack(fill=tk.X)
         self._prog_fill = tk.Frame(self._prog_track, height=8, bg="#22c55e", highlightthickness=0)
 
-        f_post_body = self._make_section(main, "Ao concluir", _IC_DONE)
+        # --- Ao concluir ---
+        f_post_body = self._make_section(content, "Ao concluir", _IC_DONE)
         f_opts = ttk.Frame(f_post_body)
         f_opts.pack(fill=tk.X, pady=(_PX_MICRO, 0))
         ttk.Checkbutton(
@@ -687,7 +849,7 @@ class CortesApp(tk.Tk):
         ).pack(side=tk.LEFT)
 
         # --- Log + resultados (globais, fora do Notebook) ---
-        self._pw_results_log = ttk.Panedwindow(main, orient=tk.VERTICAL)
+        self._pw_results_log = ttk.Panedwindow(content, orient=tk.VERTICAL)
         self._pw_results_log.pack(fill=tk.BOTH, expand=True, pady=(_PX_SECTION, 0))
 
         lf = ttk.Frame(
@@ -705,7 +867,7 @@ class CortesApp(tk.Tk):
 
         for pane, title, icon in (
             (lf, "Log da execução", _IC_LOG),
-            (f_last, "Última execução — vídeos e legendas", _IC_CLIPBOARD),
+            (f_last, "Resultados — vídeos e legendas", _IC_CLIPBOARD),
         ):
             ph = ttk.Frame(pane)
             ph.pack(fill=tk.X, pady=(0, _PX_NEAR))
@@ -786,6 +948,16 @@ class CortesApp(tk.Tk):
             command=self._export_zip_clicked,
             style=sec,
         ).pack(side=tk.LEFT, padx=(0, _PX_NEAR), pady=_PX_MICRO)
+
+        # ===== Status bar =====
+        status_bar = ttk.Frame(self, style="Status.TFrame")
+        status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+        ttk.Label(
+            status_bar,
+            textvariable=self._status_var,
+            style="Status.TLabel",
+            padding=(_PX_SECTION, _PX_MICRO + 2),
+        ).pack(side=tk.LEFT)
 
         self._apply_text_widget_theme()
         if self._urls_ph_visible:
@@ -1435,10 +1607,10 @@ class CortesApp(tk.Tk):
         log_fg = getattr(self, "_log_fg", fg)
         if self._is_dark_theme:
             sel_bg, sel_fg = "#0e7490", "#ecfeff"
-            hl_bg, hl_focus = "#30363d", "#22d3ee"
+            hl_bg, hl_focus = "#334155", "#22d3ee"
         else:
-            sel_bg, sel_fg = "#b6d7ff", "#0d1117"
-            hl_bg, hl_focus = "#d0d7de", "#0969da"
+            sel_bg, sel_fg = "#b6d7ff", "#0f172a"
+            hl_bg, hl_focus = "#d0d7de", "#0891b2"
         kw_urls = dict(
             background=bg,
             foreground=fg,
@@ -1604,12 +1776,14 @@ class CortesApp(tk.Tk):
         if running:
             for w, _idle in self._idle_states.items():
                 w.configure(state=tk.DISABLED)
+            self._set_status("Processando…")
         else:
             for w, idle in self._idle_states.items():
                 w.configure(state=idle)
             self._toggle_tts()
             if not running:
                 self._set_tts_preview_busy(False)
+                self._set_status("Pronto")
 
     def _cancel_pipeline(self) -> None:
         try:
@@ -1618,6 +1792,7 @@ class CortesApp(tk.Tk):
             request_cancel()
             self._append_log("\n[!] Cancelamento solicitado…\n")
             self._btn_cancel.configure(state=tk.DISABLED)
+            self._set_status("Cancelando…")
         except Exception:
             # se algo der errado, não derruba a UI
             self._append_log("\n[!] Não foi possível solicitar cancelamento.\n")
@@ -1631,6 +1806,7 @@ class CortesApp(tk.Tk):
         self._populate_results_tree(self._last_outputs)
 
         if had_error:
+            self._set_status("Erro — veja o log")
             err_line = (self._last_pipeline_error or "").strip()
             box_msg = (
                 f"{err_line}\n\nVeja o traceback completo no painel «Log da execução»."
@@ -1647,9 +1823,12 @@ class CortesApp(tk.Tk):
             return
 
         if not outputs:
+            self._set_status("Concluído — nenhum arquivo gerado")
             if self._notify_when_done.get():
                 desktop_notify("Processamento", "Nenhum arquivo gerado nesta execução.")
             return
+
+        self._set_status(f"Concluído — {len(outputs)} arquivo(s) pronto(s)")
 
         if self._open_results_when_done.get():
             _open_folder(OUTPUT_DIR)
@@ -2066,7 +2245,7 @@ class CortesApp(tk.Tk):
             _pipeline_log_line(f"A usar {len(locals_)} arquivo(s) local(is) do disco.")
         if urls:
             n_u = len(urls)
-            max_workers = max(1, min(3, n_u))
+            max_workers = max(1, min(DOWNLOAD_MAX_WORKERS, n_u))
             _pipeline_log_line(
                 f"A baixar {n_u} URL(s) da internet (até {max_workers} em paralelo) com yt-dlp…"
             )

@@ -33,13 +33,12 @@ GROQ_TRANSCRIBE_SINGLE_MAX_SEC: float = float(
     os.getenv("GROQ_TRANSCRIBE_SINGLE_MAX_SEC", "42")
 )
 # Transcrições em fatias: quantas chamadas Groq paralelas no máximo (parede menor em áudio longo).
-# Default 2: suficiente na rede sem competir com FFmpeg em CPUs 6c/12t (ex.: Ryzen 5600G).
-# Default 1: menos 429 na API Groq ao fatiar áudios longos (2 workers disparam muitas requisições).
+# Default 2: reduz o tempo de transcrição em ~50% sem disparar 429 (groq_limiter já protege).
 GROQ_TRANSCRIBE_MAX_WORKERS: int = max(
-    1, min(16, int(os.getenv("GROQ_TRANSCRIBE_MAX_WORKERS", "1")))
+    1, min(16, int(os.getenv("GROQ_TRANSCRIBE_MAX_WORKERS", "2")))
 )
 # Tradução: 1=texto agrupado (menos HTTP); 0=comportamento atual (segmento a segmento).
-TRANSLATE_BATCH: bool = os.getenv("TRANSLATE_BATCH", "0").strip().lower() in (
+TRANSLATE_BATCH: bool = os.getenv("TRANSLATE_BATCH", "1").strip().lower() in (
     "1",
     "true",
     "yes",
@@ -385,3 +384,6 @@ DUB_SILENCE_DETECT_DB: float = float(os.getenv("DUB_SILENCE_DETECT_DB", "-40"))
 
 # TTS mais longo que o slot do Whisper: acelerar até este fator (atempo) antes de cortar o resto
 DUB_MAX_TTS_SPEEDUP: float = float(os.getenv("DUB_MAX_TTS_SPEEDUP", "4.0"))
+
+# Downloads paralelos com yt-dlp (web, GUI, Telegram). Default 3; ajuste via env.
+DOWNLOAD_MAX_WORKERS: int = max(1, min(10, int(os.getenv("DOWNLOAD_MAX_WORKERS", "3"))))
