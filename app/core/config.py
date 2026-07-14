@@ -387,3 +387,9 @@ DUB_MAX_TTS_SPEEDUP: float = float(os.getenv("DUB_MAX_TTS_SPEEDUP", "4.0"))
 
 # Downloads paralelos com yt-dlp (web, GUI, Telegram). Default 3; ajuste via env.
 DOWNLOAD_MAX_WORKERS: int = max(1, min(10, int(os.getenv("DOWNLOAD_MAX_WORKERS", "3"))))
+
+# Transcrição: "local" (faster-whisper na GPU) ou "groq" (nuvem, comportamento antigo).
+TRANSCRIBE_BACKEND: str = os.getenv("TRANSCRIBE_BACKEND", "local").strip().lower()
+# Modelo do faster-whisper (large-v3 = melhor; medium = mais rápido/menos VRAM).
+LOCAL_WHISPER_MODEL: str = os.getenv("LOCAL_WHISPER_MODEL", "large-v3").strip()
+LOCAL_WHISPER_COMPUTE: str = os.getenv("LOCAL_WHISPER_COMPUTE", "float16").strip()

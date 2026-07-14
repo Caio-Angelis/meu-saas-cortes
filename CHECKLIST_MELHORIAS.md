@@ -50,6 +50,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 <!-- A IA adiciona novas linhas ABAIXO desta. Nunca apague linhas antigas. -->
 2026-07-13 — última: 0.2 (baseline 158 passed) — próxima: 1.1 — testes: OK
 2026-07-13 — última: 1.1 (faster-whisper 1.2.1) — próxima: 1.2 — testes: OK
+2026-07-13 — última: 1.2 (TRANSCRIBE_BACKEND config) — próxima: 1.3 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -114,7 +115,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   .venv/bin/pip install faster-whisper
   ```
 
-- [ ] **1.2 — Adicionar config.** No fim de `app/core/config.py`, adicione:
+- [x] **1.2 — Adicionar config.** No fim de `app/core/config.py`, adicione:
   ```python
   # Transcrição: "local" (faster-whisper na GPU) ou "groq" (nuvem, comportamento antigo).
   TRANSCRIBE_BACKEND: str = os.getenv("TRANSCRIBE_BACKEND", "local").strip().lower()
