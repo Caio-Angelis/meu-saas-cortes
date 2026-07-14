@@ -49,6 +49,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 - (exemplo) 2026-07-10 — última: 0.2 (baseline) — próxima: 1.1 — testes: OK
 <!-- A IA adiciona novas linhas ABAIXO desta. Nunca apague linhas antigas. -->
 2026-07-13 — última: 0.2 (baseline 158 passed) — próxima: 1.1 — testes: OK
+2026-07-13 — última: 1.1 (faster-whisper 1.2.1) — próxima: 1.2 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -108,7 +109,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 **Objetivo:** parar de transcrever na nuvem (Groq) e passar a transcrever na GPU, mais rápido e com **timestamp por palavra** (necessário para a legenda karaokê da Fase 2).
 **Arquivos:** cria `app/ai_integrations/local_whisper.py`; edita `app/ai_integrations/transcriber.py` e `app/core/config.py`.
 
-- [ ] **1.1 — Instalar a biblioteca:**
+- [x] **1.1 — Instalar a biblioteca:**
   ```bash
   .venv/bin/pip install faster-whisper
   ```
