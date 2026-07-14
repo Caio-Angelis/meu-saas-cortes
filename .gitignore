@@ -80,3 +80,5 @@ Thumbs.db
 # ── Misc ────────────────────────────────────────────
 **/New folder/
 *.log
+# Git worktrees isolados
+.worktrees/
