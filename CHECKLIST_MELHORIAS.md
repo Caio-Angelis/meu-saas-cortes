@@ -66,6 +66,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 2C.2 (write_tiktok_ass_karaoke_from_srt) — próxima: 2C.3 — testes: OK
 2026-07-13 — última: 2C.3 (import karaoke no subtitle_burner) — próxima: 2C.4 — testes: OK
 2026-07-13 — última: 2C.4 (branch karaoke em _prepare_scale_crop_overlay_vf) — próxima: 2C.5 — testes: OK
+2026-07-13 — última: 2C.5 — próxima: 3.1 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -448,7 +449,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
           )
   ```
 
-- [ ] **2C.5 — Testar:** gere um clipe com fala. As palavras devem ir mudando de cor (branco → amarelo) conforme a fala avança. Se quiser desligar, ponha `SUBTITLE_KARAOKE=0` no `.env`. Rode `pytest`.
+- [x] **2C.5 — Testar:** gere um clipe com fala. As palavras devem ir mudando de cor (branco → amarelo) conforme a fala avança. Se quiser desligar, ponha `SUBTITLE_KARAOKE=0` no `.env`. Rode `pytest`.
 
 ---
 
