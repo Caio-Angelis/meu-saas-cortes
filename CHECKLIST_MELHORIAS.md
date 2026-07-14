@@ -52,6 +52,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 1.1 (faster-whisper 1.2.1) — próxima: 1.2 — testes: OK
 2026-07-13 — última: 1.2 (TRANSCRIBE_BACKEND config) — próxima: 1.3 — testes: OK
 2026-07-13 — última: 1.3 (local_whisper.py) — próxima: 1.4 — testes: OK
+2026-07-13 — última: 1.4 (transcriber local backend) — próxima: 1.5 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -186,7 +187,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
       return out
   ```
 
-- [ ] **1.4 — Ligar o backend local em `transcriber.py`.** Abra `app/ai_integrations/transcriber.py`, LOCALIZE o início da função:
+- [x] **1.4 — Ligar o backend local em `transcriber.py`.** Abra `app/ai_integrations/transcriber.py`, LOCALIZE o início da função:
   ```python
   def transcribe_audio(audio_path: str, language: str = None, *, source_video_path: str | None = None) -> list[dict]:
   ```

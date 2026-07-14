@@ -14,7 +14,7 @@ Os arquivos `README.md` e `FLUXO_DE_DADOS.md` descrevem o fluxo básico (o READM
 
 **Verificação após alterações:** com o venv ativo e dependências de dev instaladas (`pip install -r requirements-dev.txt`), rode **`pytest`** na raiz (config em `[tool.pytest.ini_options]` no `pyproject.toml`, `testpaths = ["tests"]`, `addopts = "-q"`). Em jul/2026 a suíte tem **158 testes** (baseline `CHECKLIST_MELHORIAS` item **0.2**, worktree `checklist-melhorias`) e cobre lógica pura e integrações leves **sem** chamar Groq, FFmpeg ou yt-dlp na maior parte dos casos — ideal para checar regressões rápidas antes de um processamento completo. Manter **158 passed** ao avançar o checklist.
 
-**Checklist melhorias (worktree `checklist-melhorias`):** itens **1.1–1.3** — `faster-whisper==1.2.1` no `.venv`; config `TRANSCRIBE_BACKEND` / `LOCAL_WHISPER_*` em `app/core/config.py`; módulo `app/ai_integrations/local_whisper.py` (`local_whisper_available`, `transcribe_local`). Ainda **não** ligado em `transcriber.py` (item **1.4**). `requirements.txt` **não** foi alterado.
+**Checklist melhorias (worktree `checklist-melhorias`):** itens **1.1–1.4** — `faster-whisper==1.2.1` no `.venv`; config `TRANSCRIBE_BACKEND` / `LOCAL_WHISPER_*` em `app/core/config.py`; módulo `app/ai_integrations/local_whisper.py`; `transcribe_audio` em `transcriber.py` atalho para `transcribe_local` quando `TRANSCRIBE_BACKEND=local` (fallback Groq). Próximo: **1.5** (`.env.example`). `requirements.txt` **não** foi alterado.
 
 ---
 
@@ -41,7 +41,7 @@ O pipeline acelera levemente o vídeo (`CLIP_SPEED_UP_PERCENT`, padrão 2%) e ap
 |--------|------------|
 | Linguagem | Python 3.10+ (alvo de lint `py312` no `pyproject.toml`) |
 | Vídeo/áudio | **FFmpeg** + **ffprobe** (obrigatório; `config` resolve caminho e verifica filtro `drawtext`) |
-| IA — transcrição | **Groq** API, modelo Whisper (áudio longo é fatiado e remontado) |
+| IA — transcrição | **Groq** API Whisper (default) ou **faster-whisper local** (`TRANSCRIBE_BACKEND=local`); áudio longo no caminho Groq é fatiado e remontado |
 | IA — momentos virais + legenda de post + hooks | **Groq** chat, default `llama-3.3-70b-versatile`; **legenda TikTok** (texto do post) usa o mesmo modelo, prompt ancorado na transcrição do clipe + hook on-screen; hashtags de conteúdo (filtra genéricas tipo #plotwist); fallback extrai palavras da transcrição |
 | Tradução | **Google Translate** via `deep-translator` (com modo batch opcional) |
 | TTS (padrão GUI / História / Quiz / Batalha) | **Kokoro** local GPU (`app/local_tts.py`) quando instalado; senão **Gemini** ou **edge-tts** |
@@ -250,7 +250,7 @@ Cancelamento cooperativo; `run_cancelable` usa `wait(timeout)` em loop e drena P
 | Módulo | Função |
 |--------|--------|
 | `groq_chat.py` | Chat Groq com limite + retry; **`model`** configurável (default `llama-3.3-70b-versatile`). Cliente **singleton** lazy (`_get_client`). |
-| `transcriber.py` | Whisper via Groq; cliente `Groq` criado **no import** (`timeout` de `GROQ_HTTP_TIMEOUT_SEC`); fatias respeitam `GROQ_MAX_IN_FLIGHT`; **`-c:a copy`** no MP3 extraído; ffprobe/ffmpeg via `run_cancelable`. |
+| `transcriber.py` | Whisper via Groq (ou **local** se `TRANSCRIBE_BACKEND=local` e faster-whisper disponível — atalho no topo de `transcribe_audio`); cliente `Groq` criado **no import** (`timeout` de `GROQ_HTTP_TIMEOUT_SEC`); fatias respeitam `GROQ_MAX_IN_FLIGHT`; **`-c:a copy`** no MP3 extraído; ffprobe/ffmpeg via `run_cancelable`. |
 | `viral_analyzer.py` | Prompt + parse JSON + refinamento de janelas + hooks. |
 | `translator.py` | Tradução por segmento ou batch; cache LRU por texto; limiter + retries. |
 | `tiktok_caption.py` | Prompt JSON para descrição de post (conteúdo do clipe, sem hashtags genéricas de viral); `llama-3.3-70b-versatile`; fallback com hashtags da transcrição; `append_source_attribution_to_caption`; `save_tiktok_caption_file`. |

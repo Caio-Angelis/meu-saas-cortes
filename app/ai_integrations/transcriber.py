@@ -217,6 +217,16 @@ def transcribe_audio(audio_path: str, language: str = None, *, source_video_path
     Quando source_video_path é fornecido e o áudio é longo, fatia diretamente do vídeo
     (pula a extração de MP3 intermediário).
     """
+    from app.core.config import TRANSCRIBE_BACKEND
+    if TRANSCRIBE_BACKEND == "local":
+        try:
+            from app.ai_integrations.local_whisper import local_whisper_available, transcribe_local
+            if local_whisper_available():
+                _log.info("Transcrição LOCAL (faster-whisper na GPU).")
+                return transcribe_local(audio_path, language)
+            _log.warning("faster-whisper indisponível; caindo para Groq.")
+        except Exception as e:
+            _log.warning("Transcrição local falhou (%s); caindo para Groq.", e)
     if not os.path.exists(audio_path):
         raise FileNotFoundError(f"Áudio não encontrado: {audio_path}")
 
