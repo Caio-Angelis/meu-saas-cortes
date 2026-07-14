@@ -85,6 +85,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-14 — última: 6A.1 — próxima: 6A.2 — testes: OK
 2026-07-14 — última: 6A.2 — próxima: 6A.3 — testes: OK
 2026-07-14 — última: 6A.3 — próxima: 6A.4 — testes: OK
+2026-07-14 — última: 6A.4 — próxima: 6A.5 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -769,7 +770,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
                   spk = last_speaker_i
   ```
 
-- [ ] **6A.4 — Calcular e repassar `voiced` em `compute_crop_plan`.** Em `compute_crop_plan`, LOCALIZE onde é chamado `_speaker_timeline_crop_segments(` e adicione o argumento `voiced=`. Primeiro, logo após `use_clip = clip_start is not None and clip_end is not None`, calcule:
+- [x] **6A.4 — Calcular e repassar `voiced` em `compute_crop_plan`.** Em `compute_crop_plan`, LOCALIZE onde é chamado `_speaker_timeline_crop_segments(` e adicione o argumento `voiced=`. Primeiro, logo após `use_clip = clip_start is not None and clip_end is not None`, calcule:
   ```python
               voiced = _voiced_intervals(video_path, float(clip_start), float(clip_end)) if use_clip else None
   ```

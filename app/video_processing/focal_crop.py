@@ -834,6 +834,7 @@ def compute_crop_plan(
             return None
         try:
             use_clip = clip_start is not None and clip_end is not None
+            voiced = _voiced_intervals(video_path, float(clip_start), float(clip_end)) if use_clip else None
             clip_len = 0.0
             if use_clip:
                 clip_len = max(0.04, float(clip_end) - float(clip_start))
@@ -870,6 +871,7 @@ def compute_crop_plan(
                 SMART_CROP_SPEAKER_FPS,
                 time_offset_sec=float(clip_start) if use_clip else 0.0,
                 clip_duration_sec=clip_len if use_clip else None,
+                voiced=voiced,
             )
             if not segs or len(segs) == 1:
                 if static is None:
