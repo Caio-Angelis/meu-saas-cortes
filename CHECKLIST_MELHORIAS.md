@@ -62,6 +62,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 2B.3 (fontsdir no filtro subtitles) — próxima: 2B.4 — testes: OK
 2026-07-13 — última: 2B.4 (override Arial → TIKTOK_SUBTITLE_FONT) — próxima: 2B.5 — testes: OK
 2026-07-13 — última: 2B.5 (visual Montserrat OK) — próxima: 2C.1 — testes: OK
+2026-07-13 — última: 2C.1 (SUBTITLE_KARAOKE config) — próxima: 2C.2 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -294,7 +295,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 
 > Esta versão funciona **sempre**, mesmo com legenda traduzida: ela divide o tempo de cada linha igualmente entre as palavras. Não depende de mexer no resto do pipeline.
 
-- [ ] **2C.1** — No fim de `app/core/config.py` adicione:
+- [x] **2C.1** — No fim de `app/core/config.py` adicione:
   ```python
   # Legenda karaokê (palavra a palavra). 1 = ligado.
   SUBTITLE_KARAOKE: bool = os.getenv("SUBTITLE_KARAOKE", "1").strip().lower() in ("1","true","yes","on")

@@ -397,3 +397,8 @@ LOCAL_WHISPER_COMPUTE: str = os.getenv("LOCAL_WHISPER_COMPUTE", "float16").strip
 # Nome interno da fonte da legenda (deve bater com o "name" do TTF em assets/fonts/)
 TIKTOK_SUBTITLE_FONT: str = os.getenv("TIKTOK_SUBTITLE_FONT", "Montserrat").strip()
 FONTS_DIR: str = str((Path(__file__).resolve().parents[2] / "assets" / "fonts"))
+
+# Legenda karaokê (palavra a palavra). 1 = ligado.
+SUBTITLE_KARAOKE: bool = os.getenv("SUBTITLE_KARAOKE", "1").strip().lower() in ("1","true","yes","on")
+# Cor de destaque da palavra ativa (hex). Base fica branca.
+SUBTITLE_KARAOKE_HIGHLIGHT: str = os.getenv("SUBTITLE_KARAOKE_HIGHLIGHT", "#FFE000").strip()
