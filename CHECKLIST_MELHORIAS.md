@@ -69,6 +69,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 2C.5 — próxima: 3.1 — testes: OK
 2026-07-13 — última: 3.1 — próxima: 3.1b — testes: N (heuristic esperado)
 2026-07-13 — última: 3.1b — próxima: 3.2 — testes: OK
+2026-07-13 — última: 3.2 — próxima: 3.3 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -490,7 +491,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   ```
   (mantenha `test_gpu_off_never` como está — ele continua válido). Depois rode `pytest` e confirme que voltou a ficar tudo verde.
 
-- [ ] **3.2** — Em `app/core/config.py`, LOCALIZE o ramo do NVENC dentro de `gpu_clip_encoder_ffmpeg_args()`:
+- [x] **3.2** — Em `app/core/config.py`, LOCALIZE o ramo do NVENC dentro de `gpu_clip_encoder_ffmpeg_args()`:
   ```python
       if enc in ("h264_nvenc", "nvenc"):
           return [
