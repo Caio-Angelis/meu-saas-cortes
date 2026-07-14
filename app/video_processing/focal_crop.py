@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from app.core.config import (
+    FFMPEG_PATH,
     OUTPUT_VIDEO_HEIGHT,
     OUTPUT_VIDEO_WIDTH,
     SMART_CROP_FRAME_SAMPLES,
@@ -740,6 +741,52 @@ def _speaker_timeline_crop_segments(
             compact.append((a, b, x, y))
 
     return compact
+
+
+def _voiced_intervals(video_path: str, clip_start: float, clip_end: float) -> list[tuple[float, float]]:
+    """Intervalos (em segundos, relativos ao início do clipe) onde há voz.
+    Usa silencedetect e inverte. Se algo falhar, devolve [] (sem gate)."""
+    import re
+    import subprocess
+    try:
+        dur = max(0.1, float(clip_end) - float(clip_start))
+        p = subprocess.run(
+            [FFMPEG_PATH, "-ss", str(clip_start), "-t", str(dur), "-i", video_path,
+             "-af", "silencedetect=noise=-30dB:d=0.3", "-f", "null", "-"],
+            capture_output=True, text=True, check=False,
+        )
+        text = p.stderr or ""
+        silences: list[tuple[float, float]] = []
+        cur = None
+        for line in text.splitlines():
+            m1 = re.search(r"silence_start:\s*([\d.]+)", line)
+            m2 = re.search(r"silence_end:\s*([\d.]+)", line)
+            if m1:
+                cur = float(m1.group(1))
+            elif m2 and cur is not None:
+                silences.append((cur, float(m2.group(1))))
+                cur = None
+        # inverte silêncios -> voz
+        voiced: list[tuple[float, float]] = []
+        t = 0.0
+        for s0, s1 in silences:
+            if s0 > t:
+                voiced.append((t, s0))
+            t = max(t, s1)
+        if t < dur:
+            voiced.append((t, dur))
+        return voiced
+    except Exception:
+        return []
+
+
+def _is_voiced(t: float, voiced: list[tuple[float, float]]) -> bool:
+    if not voiced:
+        return True  # sem info -> permite (comportamento antigo)
+    for a, b in voiced:
+        if a <= t <= b:
+            return True
+    return False
 
 
 def compute_crop_plan(

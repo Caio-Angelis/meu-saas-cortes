@@ -82,6 +82,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 5.2 — próxima: 5.3 — testes: OK
 2026-07-13 — última: 5.3 — próxima: 5.4 — testes: OK
 2026-07-13 — última: 5.4 — próxima: 6A.1 — testes: OK
+2026-07-14 — última: 6A.1 — próxima: 6A.2 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -678,7 +679,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 
 **Ideia:** hoje o "quem fala" é decidido só por movimento de pixels — qualquer mexida rouba o foco. Vamos permitir troca de falante **apenas quando há voz** naquele instante. Nos silêncios, o crop fica parado.
 
-- [ ] **6A.1 — Detectar intervalos de voz.** Em `app/video_processing/focal_crop.py`, adicione no topo o import:
+- [x] **6A.1 — Detectar intervalos de voz.** Em `app/video_processing/focal_crop.py`, adicione no topo o import:
   ```python
   from app.core.config import FFMPEG_PATH
   ```
