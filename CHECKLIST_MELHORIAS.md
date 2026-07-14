@@ -91,6 +91,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-14 — última: 6B.2 — próxima: 6B.3 — testes: OK
 2026-07-14 — última: 6B.3 — próxima: 6B.4 — testes: OK
 2026-07-14 — última: 6B.4/6B.5 (ADIADO, SMART_CROP_SPLIT_ENABLED=0) — próxima: 7.1 — testes: OK
+2026-07-14 — última: 7.1 — próxima: 7.2 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -893,7 +894,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 **Objetivo:** dar um padrão visual sutil, tudo no MESMO passe FFmpeg (sem deixar mais lento).
 **Arquivo:** `app/video_processing/subtitle_burner.py` e `app/core/config.py`.
 
-- [ ] **7.1 — Config.** No fim de `app/core/config.py`:
+- [x] **7.1 — Config.** No fim de `app/core/config.py`:
   ```python
   # Identidade visual (tudo no passe único; custo ~zero)
   VISUAL_GRADE: bool = os.getenv("VISUAL_GRADE", "1").strip().lower() in ("1","true","yes","on")
