@@ -53,6 +53,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 1.2 (TRANSCRIBE_BACKEND config) — próxima: 1.3 — testes: OK
 2026-07-13 — última: 1.3 (local_whisper.py) — próxima: 1.4 — testes: OK
 2026-07-13 — última: 1.4 (transcriber local backend) — próxima: 1.5 — testes: OK
+2026-07-13 — última: 1.5 (.env.example TRANSCRIBE_BACKEND) — próxima: 1.6 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -206,7 +207,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   ```
   **Cuidado:** isso é só um "atalho" no topo. Se cair no Groq, tudo continua como antes.
 
-- [ ] **1.5 — Documentar no `.env.example`.** Adicione ao arquivo `.env.example`:
+- [x] **1.5 — Documentar no `.env.example`.** Adicione ao arquivo `.env.example`:
   ```
   # Transcrição: local (GPU, rápido, dá timestamp por palavra) ou groq (nuvem)
   # TRANSCRIBE_BACKEND=local

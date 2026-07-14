@@ -14,7 +14,7 @@ Os arquivos `README.md` e `FLUXO_DE_DADOS.md` descrevem o fluxo básico (o READM
 
 **Verificação após alterações:** com o venv ativo e dependências de dev instaladas (`pip install -r requirements-dev.txt`), rode **`pytest`** na raiz (config em `[tool.pytest.ini_options]` no `pyproject.toml`, `testpaths = ["tests"]`, `addopts = "-q"`). Em jul/2026 a suíte tem **158 testes** (baseline `CHECKLIST_MELHORIAS` item **0.2**, worktree `checklist-melhorias`) e cobre lógica pura e integrações leves **sem** chamar Groq, FFmpeg ou yt-dlp na maior parte dos casos — ideal para checar regressões rápidas antes de um processamento completo. Manter **158 passed** ao avançar o checklist.
 
-**Checklist melhorias (worktree `checklist-melhorias`):** itens **1.1–1.4** — `faster-whisper==1.2.1` no `.venv`; config `TRANSCRIBE_BACKEND` / `LOCAL_WHISPER_*` em `app/core/config.py`; módulo `app/ai_integrations/local_whisper.py`; `transcribe_audio` em `transcriber.py` atalho para `transcribe_local` quando `TRANSCRIBE_BACKEND=local` (fallback Groq). Próximo: **1.5** (`.env.example`). `requirements.txt` **não** foi alterado.
+**Checklist melhorias (worktree `checklist-melhorias`):** itens **1.1–1.5** — `faster-whisper==1.2.1` no `.venv`; config `TRANSCRIBE_BACKEND` / `LOCAL_WHISPER_*` em `app/core/config.py`; módulo `app/ai_integrations/local_whisper.py`; `transcribe_audio` em `transcriber.py` atalho para `transcribe_local` quando `TRANSCRIBE_BACKEND=local` (fallback Groq); `.env.example` documenta `TRANSCRIBE_BACKEND` / `LOCAL_WHISPER_*`. Próximo: **1.6** (teste pipeline curto). `requirements.txt` **não** foi alterado.
 
 ---
 
