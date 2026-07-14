@@ -154,13 +154,8 @@ def _cleanup(*paths: str) -> None:
 
 
 def _clip_uses_gpu_encoder(clip_index: int, total_clips: int) -> bool:
-    """Últimos clipes com encoder de GPU (AMF/NVENC/QSV); restante em libx264 no CPU."""
-    if not USE_GPU_CLIP_ENCODE:
-        return False
-    need = CLIP_ENCODE_PARALLEL_CPU + CLIP_ENCODE_PARALLEL_GPU
-    if total_clips < need:
-        return False
-    return clip_index > total_clips - CLIP_ENCODE_PARALLEL_GPU
+    """Todos os clipes usam o encoder de GPU (NVENC) quando habilitado."""
+    return USE_GPU_CLIP_ENCODE
 
 
 def _process_clip_task(

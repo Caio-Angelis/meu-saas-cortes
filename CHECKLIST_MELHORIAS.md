@@ -67,6 +67,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 2C.3 (import karaoke no subtitle_burner) — próxima: 2C.4 — testes: OK
 2026-07-13 — última: 2C.4 (branch karaoke em _prepare_scale_crop_overlay_vf) — próxima: 2C.5 — testes: OK
 2026-07-13 — última: 2C.5 — próxima: 3.1 — testes: OK
+2026-07-13 — última: 3.1 — próxima: 3.1b — testes: N (heuristic esperado)
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -458,7 +459,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 **Objetivo:** usar a GPU (NVENC) em todos os clipes (hoje só os últimos) e melhorar o preset.
 **Arquivos:** `app/pipelines/cortes/pipeline.py`, `app/core/config.py`.
 
-- [ ] **3.1** — Abra `app/pipelines/cortes/pipeline.py`, LOCALIZE a função:
+- [x] **3.1** — Abra `app/pipelines/cortes/pipeline.py`, LOCALIZE a função:
   ```python
   def _clip_uses_gpu_encoder(clip_index: int, total_clips: int) -> bool:
       """Últimos clipes com encoder de GPU (AMF/NVENC/QSV); restante em libx264 no CPU."""
