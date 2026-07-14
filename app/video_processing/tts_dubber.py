@@ -93,10 +93,14 @@ async def _edge_tts_save(text: str, out_path: Path, voice: str) -> None:
             await asyncio.wait_for(comm.save(str(out_path)), timeout=timeout)
             return
         except asyncio.TimeoutError as e:
-            raise RuntimeError(
-                f"Edge-TTS excedeu {timeout:.0f}s neste trecho. "
-                "Aumente EDGE_TTS_REQUEST_TIMEOUT_SEC no .env ou tente de novo."
-            ) from e
+            last_err = e
+            if attempt >= EDGE_TTS_RETRIES - 1:
+                raise RuntimeError(
+                    f"Edge-TTS excedeu {timeout:.0f}s neste trecho. "
+                    "Aumente EDGE_TTS_REQUEST_TIMEOUT_SEC no .env ou tente de novo."
+                ) from e
+            await asyncio.sleep(min(48.0, (2**attempt) + random.random()))
+            continue
         except Exception as e:
             last_err = e
             status = getattr(e, "status", None)
@@ -121,6 +125,20 @@ async def _edge_tts_save(text: str, out_path: Path, voice: str) -> None:
 async def edge_tts_save_to_path(text: str, out_path: str | Path, voice: str) -> None:
     """Salva locução Edge-TTS no caminho indicado (extensão define o container, ex. .mp3)."""
     await _edge_tts_save(text, Path(out_path), voice)
+
+
+def _synthesize_jobs(jobs: list[tuple[str, Path]], voice: str) -> None:
+    """Sintetiza cada (texto, arquivo). Usa Kokoro local (GPU) se der; senão Edge."""
+    try:
+        from app.tts.local_tts import local_tts_available, local_tts_save_to_path
+        from app.core.config import LOCAL_TTS_PREFERRED
+        if LOCAL_TTS_PREFERRED and local_tts_available():
+            for tx, op in jobs:
+                local_tts_save_to_path(tx, str(op))  # usa a voz pt-BR padrão do Kokoro
+            return
+    except Exception as _e:
+        pass
+    _run_edge_tts_parallel(jobs, voice)
 
 
 def _run_edge_tts_parallel(jobs: list[tuple[str, Path]], voice: str) -> None:
@@ -557,7 +575,7 @@ def build_dub_audio(
             tts_jobs.append((text, raw))
             max_alloweds.append(max_allowed)
         _log.info("Edge-TTS: sintetizando %s trecho(s) com voz %s…", len(tts_jobs), voice)
-        _run_edge_tts_parallel(tts_jobs, voice)
+        _synthesize_jobs(tts_jobs, voice)
         for i, (t0, _text, _slot) in enumerate(work):
             raw = raw_paths[i]
             fit = temp_dir / f"fit_{i}.m4a"
