@@ -75,6 +75,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 4A.1 — próxima: 4A.2 — testes: OK
 2026-07-13 — última: 4A.2 — próxima: 4A.3 — testes: OK
 2026-07-13 — última: 4A.3 — próxima: 4B.1 — testes: OK
+2026-07-13 — última: 4B.1 — próxima: 4B.2 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -586,7 +587,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 
 ### 4B — História
 
-- [ ] **4B.1** — Abra `app/pipelines/historia/historia_pipeline.py`. Junto dos imports de `app.core.config`, adicione:
+- [x] **4B.1** — Abra `app/pipelines/historia/historia_pipeline.py`. Junto dos imports de `app.core.config`, adicione:
   ```python
   from app.core.config import gpu_clip_encoder_ffmpeg_args
   ```
