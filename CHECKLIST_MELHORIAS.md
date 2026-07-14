@@ -55,6 +55,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 1.4 (transcriber local backend) — próxima: 1.5 — testes: OK
 2026-07-13 — última: 1.5 (.env.example TRANSCRIBE_BACKEND) — próxima: 1.6 — testes: OK
 2026-07-13 — última: 1.6 — próxima: 2A.1 — testes: OK
+2026-07-13 — última: 2A.1 (ASS bold+outline) — próxima: 2A.2 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -231,7 +232,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 
 ### 2A — Trocar caixa opaca por contorno + negrito (rápido e seguro)
 
-- [ ] **2A.1** — Abra `app/subtitle/ass_builder.py`, dentro de `write_tiktok_ass_from_srt`, LOCALIZE:
+- [x] **2A.1** — Abra `app/subtitle/ass_builder.py`, dentro de `write_tiktok_ass_from_srt`, LOCALIZE:
   ```python
       style = (
           f"Style: Default,{font_name},{font_size},{primary_ass},&H000000FF,&H00000000,"

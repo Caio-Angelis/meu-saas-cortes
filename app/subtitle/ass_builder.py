@@ -58,7 +58,7 @@ def write_tiktok_ass_from_srt(
     # Style completo evita fallback do libass (fonte enorme / topo) com SRT+force_style.
     style = (
         f"Style: Default,{font_name},{font_size},{primary_ass},&H000000FF,&H00000000,"
-        f"{back_ass},0,0,0,0,100,100,0,0,4,0,0,{alignment},"
+        f"{back_ass},1,0,0,0,100,100,0,0,1,4,1,{alignment},"
         f"{margin_l},{margin_r},{margin_v},1"
     )
 
