@@ -1,5 +1,6 @@
 import json
 import logging
+import math
 import re
 
 from app.ai_integrations.groq_chat import groq_user_message_text
@@ -8,7 +9,7 @@ from app.core.config import CLIP_DURATION, VIRAL_CLIPS_COUNT
 
 _log = logging.getLogger(__name__)
 
-_MAX_TRANSCRIPT_CHARS = 10_000
+_MAX_TRANSCRIPT_CHARS = 24_000
 # Refino de janelas percorre segmentos O(n) por clipe; transcrições longas geram milhares de segmentos.
 _MAX_SEGMENTS_FOR_REFINE = 3000
 
@@ -45,17 +46,15 @@ def _build_transcript_text(segments: list[dict]) -> str:
     if not segments:
         return ""
 
-    linhas = []
-    tamanho_atual = 0
-
-    for seg in segments:
-        linha = f"[{seg['start']:.0f}s] {seg['text']}"
-        if tamanho_atual + len(linha) > _MAX_TRANSCRIPT_CHARS:
-            break
-        linhas.append(linha)
-        tamanho_atual += len(linha) + 1
-
-    return "\n".join(linhas)
+    linhas_full = [f"[{seg['start']:.0f}s] {seg['text']}" for seg in segments]
+    total = sum(len(x) + 1 for x in linhas_full)
+    if total <= _MAX_TRANSCRIPT_CHARS:
+        return "\n".join(linhas_full)
+    # Não cabe tudo: amostra uniformemente do início ao fim (cobre o vídeo inteiro).
+    keep = max(1, int(len(linhas_full) * _MAX_TRANSCRIPT_CHARS / total))
+    step = max(1, math.ceil(len(linhas_full) / keep))
+    amostra = linhas_full[::step]
+    return "\n".join(amostra)
 
 
 def _normalize_hook(phrase: str) -> str:
