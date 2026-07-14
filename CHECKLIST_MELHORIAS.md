@@ -60,6 +60,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 2B.1 (Montserrat-Bold.ttf em assets/fonts/) — próxima: 2B.2 — testes: N/A (asset only)
 2026-07-13 — última: 2B.2 (TIKTOK_SUBTITLE_FONT + FONTS_DIR) — próxima: 2B.3 — testes: OK
 2026-07-13 — última: 2B.3 (fontsdir no filtro subtitles) — próxima: 2B.4 — testes: OK
+2026-07-13 — última: 2B.4 (override Arial → TIKTOK_SUBTITLE_FONT) — próxima: 2B.5 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -278,7 +279,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
       vf = f"{scale_crop},subtitles='{escaped}'{fonts_clause}{hook_vf}{cta_vf}"
   ```
 
-- [ ] **2B.4** — Ainda em `subtitle_burner.py`, garanta que a fonte usada é a nova. Isso é controlado pelo parâmetro `fonte` que vem de fora com default `"Arial"`. Não mude a assinatura; em vez disso, no começo de `_prepare_scale_crop_overlay_vf`, logo após o `def ...:` e o docstring, adicione:
+- [x] **2B.4** — Ainda em `subtitle_burner.py`, garanta que a fonte usada é a nova. Isso é controlado pelo parâmetro `fonte` que vem de fora com default `"Arial"`. Não mude a assinatura; em vez disso, no começo de `_prepare_scale_crop_overlay_vf`, logo após o `def ...:` e o docstring, adicione:
   ```python
       from app.core.config import TIKTOK_SUBTITLE_FONT
       if fonte in (None, "", "Arial"):

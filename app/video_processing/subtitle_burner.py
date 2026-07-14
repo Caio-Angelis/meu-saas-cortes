@@ -114,6 +114,9 @@ def _prepare_scale_crop_overlay_vf(
     """
     Monta filter chain (scale/crop/ASS + drawtext). Gera .ass e arquivos auxiliares no disco.
     """
+    from app.core.config import TIKTOK_SUBTITLE_FONT
+    if fonte in (None, "", "Arial"):
+        fonte = TIKTOK_SUBTITLE_FONT
     alignment = 2 if posicao == "bottom" else 8
     primary = _hex_to_ass_primary(cor_letra)
     back = _hex_to_ass_back(cor_fundo, opacidade)
