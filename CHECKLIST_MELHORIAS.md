@@ -70,6 +70,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 3.1 — próxima: 3.1b — testes: N (heuristic esperado)
 2026-07-13 — última: 3.1b — próxima: 3.2 — testes: OK
 2026-07-13 — última: 3.2 — próxima: 3.3 — testes: OK
+2026-07-13 — última: 3.3 — próxima: 3.4 — testes: N (config .env local)
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -538,7 +539,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
           ]
   ```
 
-- [ ] **3.3** — No seu `.env`, coloque (mais encodes em paralelo na GPU de 16 GB):
+- [x] **3.3** — No seu `.env`, coloque (mais encodes em paralelo na GPU de 16 GB):
   ```
   CLIP_ENCODE_PARALLEL_GPU=4
   ```
