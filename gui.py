@@ -36,12 +36,11 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from tkinter import colorchooser, filedialog, messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
-from typing import NamedTuple
-
 # Garante caminhos relativos (resultados/, temp/) a partir da pasta do projeto
 _ROOT = Path(__file__).resolve().parent
 os.chdir(_ROOT)
 
+import app.core.config as _cfg
 from app.core.config import (
     DOWNLOAD_MAX_WORKERS,
     EDGE_TTS_VOICE_PT,
@@ -57,6 +56,24 @@ from app.tts.tts_voices import (
     voice_id_from_label,
 )
 from app.gui.gui_export import desktop_notify, export_cortes_zip, ffprobe_duration_seconds, format_duration_hms
+from app.gui.studio_theme import (
+    EDGE,
+    INK,
+    INK2,
+    MOSS,
+    MOSS_DK,
+    MOSS_HI,
+    MUTED,
+    MUTED_SOFT,
+    PANEL,
+    STATUS_BG,
+    TEXT,
+    StudioTheme,
+    configure_studio_theme,
+    configure_ui_fonts,
+    load_photo,
+    load_photo_resized,
+)
 from app.core.logging_setup import gui_pipeline_log_redirect, setup_logging
 from app.pipelines.cortes.pipeline import run_pipeline
 from app.pipelines.batalha.batalha_pipeline import normalize_batalha_modo, run_batalha_pipeline_from_payload
@@ -70,27 +87,11 @@ from app.download.ytdlp_download import (
     resolve_ytdlp_executable,
 )
 
-
-class _GuiTheme(NamedTuple):
-    """Tokens de aparência (tema Sun Valley ou fallback escuro)."""
-
-    text_bg: str
-    text_fg: str
-    hint_fg: str
-    is_dark: bool
-    card_style: str
-    checkbutton_style: str
-    secondary_button_style: str
-    log_fg: str
-    accent_strip: str
-    urls_inset_bg: str
-
-
 # Espaçamento visual (px): micro / próximo / seção / hero
 _PX_MICRO = 6
 _PX_NEAR = 12
-_PX_SECTION = 24
-_PX_HERO = 32
+_PX_SECTION = 22
+_PX_HERO = 28
 
 # Texto de placeholder da área de URLs (uma linha; cor aplicada via hint)
 _URLS_PLACEHOLDER = (
@@ -105,32 +106,26 @@ _URLS_HELP_TEXT = (
     "e configure cookies (veja .env.example)."
 )
 
-# Cinza extra-apagado para notas curtas (fora do token hint do tema)
-_MUTED_NOTE_FG = "#6b7280"
+# Alias de tokens (compat com código legado da GUI)
+_MUTED_NOTE_FG = MUTED_SOFT
+_SIDEBAR_BG = INK2
+_SIDEBAR_FG = MUTED
+_STATUS_BG = STATUS_BG
+_STATUS_FG = MUTED_SOFT
 
-# Colas da barra lateral (sidebar) e barra de status — sempre escuro
-_SIDEBAR_BG = "#111827"
-_SIDEBAR_HOVER = "#1e293b"
-_SIDEBAR_ACTIVE = "#0891b2"
-_SIDEBAR_FG = "#94a3b8"
-_SIDEBAR_ACTIVE_FG = "#f0fdfa"
-_STATUS_BG = "#0f172a"
-_STATUS_FG = "#64748b"
-_CARD_BORDER = "#1e293b"
-
-# Ícones Unicode (fallback sem dependência extra; fontes do sistema costumam renderizar)
-_IC_VIDEO = "\u25b6"  # ▶
-_IC_SETTINGS = "\u2699"  # ⚙
-_IC_MIC = "\U0001f3a4"  # 🎤
-_IC_RUN = "\u26a1"  # ⚡
-_IC_CLIPBOARD = "\U0001f4cb"  # 📋
-_IC_LOG = "\U0001f4dc"  # 📜
-_IC_DONE = "\u2713"  # ✓
-_IC_FOLDER = "\U0001f4c2"  # 📂
-_IC_QUIZ = "\U0001f9e9"  # 🧩
-_IC_SPEAKER = "\U0001f50a"  # 🔊
-_IC_BATALHA = "\u2694"  # ⚔
-_IC_HISTORIA = "\U0001f4d6"  # 📖
+# Rótulos limpos (sem emoji “XP”) — tipografia + accent fazem o trabalho
+_IC_VIDEO = "▸"
+_IC_SETTINGS = "◈"
+_IC_MIC = "◎"
+_IC_RUN = "⚡"
+_IC_CLIPBOARD = "☰"
+_IC_LOG = "⌁"
+_IC_DONE = "✓"
+_IC_FOLDER = "◫"
+_IC_QUIZ = "▣"
+_IC_SPEAKER = "♫"
+_IC_BATALHA = "⚔"
+_IC_HISTORIA = "§"
 
 # Rótulos de voz na GUI (Kokoro local + Gemini + Edge)
 _GUI_TTS_VOICE_LABELS: tuple[str, ...] = gui_voice_labels()
@@ -219,333 +214,19 @@ def _sort_clip_outputs(paths: list[str]) -> list[str]:
     return sorted(paths, key=key)
 
 
-def _configure_modern_theme(root: tk.Tk) -> _GuiTheme:
-    """
-    Tema escuro (Sun Valley / sv-ttk se instalado; senão clam escuro estilo “pro”).
-    Define estilos de cards, tabela, botões secundários e retorna tokens de cor.
-    """
-    cyan_accent = "#22d3ee"
-    log_muted = "#b1bac4"
-
-    def _try_layout(st: ttk.Style, name: str) -> bool:
-        try:
-            st.layout(name)
-            return True
-        except tk.TclError:
-            return False
-
-    try:
-        import sv_ttk
-
-        sv_ttk.set_theme("dark")
-        style = ttk.Style(root)
-        tb = style.lookup("TEntry", "fieldbackground") or "#1c2128"
-        tf = style.lookup("TEntry", "foreground") or "#e6edf3"
-        hint = "#8b949e"
-        inset = "#151a21"
-
-        # Hierarquia tipográfica (Heading / Subheading compatíveis com Card.TFrame)
-        if _try_layout(style, "Heading.TLabel"):
-            style.configure("Heading.TLabel", font=("Segoe UI Semibold", 11))
-        else:
-            style.configure("Heading.TLabel", parent="TLabel", font=("Segoe UI", 11, "bold"))
-        if _try_layout(style, "Subheading.TLabel"):
-            style.configure("Subheading.TLabel", font=("Segoe UI", 10), foreground=hint)
-        else:
-            style.configure("Subheading.TLabel", parent="TLabel", font=("Segoe UI", 10), foreground=hint)
-
-        style.configure(
-            "Treeview",
-            rowheight=38,
-            font=("Segoe UI", 10),
-            borderwidth=0,
-        )
-        style.configure(
-            "Treeview.Heading",
-            font=("Segoe UI Semibold", 10),
-            padding=(_PX_NEAR, _PX_MICRO + 2),
-        )
-
-        style.configure("TButton", padding=(14, 9))
-        style.configure(
-            "Accent.TButton",
-            padding=(22, 14),
-            font=("Segoe UI Semibold", 11),
-        )
-
-        cb_style = "Switch.TCheckbutton" if _try_layout(style, "Switch.TCheckbutton") else "TCheckbutton"
-        style.configure(cb_style, padding=(_PX_NEAR, _PX_MICRO))
-
-        sec_btn = "TButton"
-        if _try_layout(style, "Secondary.TButton"):
-            sec_btn = "Secondary.TButton"
-        else:
-            try:
-                style.configure("Subtle.TButton", parent="TButton", padding=(12, 7))
-                sec_btn = "Subtle.TButton"
-            except tk.TclError:
-                sec_btn = "TButton"
-
-        style.configure("TCheckbutton", padding=(_PX_NEAR, _PX_MICRO))
-        style.configure("Horizontal.TScale", padding=(_PX_MICRO, _PX_NEAR))
-
-        # Sidebar buttons (flat, full-width, left-aligned)
-        style.configure(
-            "Sidebar.TButton",
-            background=_SIDEBAR_BG,
-            foreground=_SIDEBAR_FG,
-            font=("Segoe UI", 10),
-            padding=(_PX_SECTION, _PX_NEAR),
-            anchor="w",
-            relief="flat",
-            borderwidth=0,
-        )
-        style.map(
-            "Sidebar.TButton",
-            background=[("active", _SIDEBAR_HOVER), ("pressed", _SIDEBAR_HOVER)],
-            foreground=[("active", "#e2e8f0")],
-        )
-        style.configure(
-            "SidebarActive.TButton",
-            background=_SIDEBAR_ACTIVE,
-            foreground=_SIDEBAR_ACTIVE_FG,
-            font=("Segoe UI Semibold", 10),
-            padding=(_PX_SECTION, _PX_NEAR),
-            anchor="w",
-            relief="flat",
-            borderwidth=0,
-        )
-        style.map(
-            "SidebarActive.TButton",
-            background=[("active", "#0e7490"), ("pressed", "#155e75")],
-        )
-
-        # Status bar
-        style.configure("Status.TLabel", background=_STATUS_BG, foreground=_STATUS_FG, font=("Segoe UI", 9))
-        style.configure("Status.TFrame", background=_STATUS_BG)
-
-        # Notebook tabs — flatter, more modern
-        style.configure("TNotebook", borderwidth=0, padding=0)
-        style.configure(
-            "TNotebook.Tab",
-            padding=(_PX_SECTION, _PX_NEAR),
-            font=("Segoe UI", 10),
-        )
-
-        return _GuiTheme(
-            text_bg=tb,
-            text_fg=tf,
-            hint_fg=hint,
-            is_dark=True,
-            card_style="Card.TFrame" if _try_layout(style, "Card.TFrame") else "TFrame",
-            checkbutton_style=cb_style,
-            secondary_button_style=sec_btn,
-            log_fg=log_muted,
-            accent_strip=cyan_accent,
-            urls_inset_bg=inset,
-        )
-    except ImportError:
-        style = ttk.Style(root)
-        style.theme_use("clam")
-        bg = "#0f172a"
-        card = "#1e293b"
-        fg = "#e2e8f0"
-        hint = "#94a3b8"
-        accent = "#22d3ee"
-        btn_bg = "#334155"
-        inset = "#0f172a"
-        root.configure(background=bg)
-        style.configure(".", background=bg, foreground=fg)
-        style.configure("TFrame", background=bg)
-        style.configure("Cardlike.TFrame", background=card, relief="flat")
-        style.configure("TLabelframe", background=bg, foreground=fg)
-        style.configure(
-            "TLabelframe.Label",
-            background=bg,
-            foreground=accent,
-            font=("Segoe UI", 10, "bold"),
-        )
-        style.configure("TLabel", background=bg, foreground=fg)
-        style.configure(
-            "Heading.TLabel",
-            background=bg,
-            foreground=fg,
-            font=("Segoe UI", 12, "bold"),
-        )
-        style.configure(
-            "Subheading.TLabel",
-            parent="TLabel",
-            font=("Segoe UI", 10),
-            foreground=hint,
-        )
-        style.configure(
-            "TButton",
-            background=btn_bg,
-            foreground=fg,
-            padding=(14, 8),
-            focusthickness=2,
-            focuscolor=accent,
-        )
-        style.map(
-            "TButton",
-            background=[("active", "#475569"), ("pressed", "#1e293b"), ("disabled", "#334155")],
-            foreground=[("disabled", "#64748b")],
-        )
-        style.configure(
-            "Accent.TButton",
-            background="#0891b2",
-            foreground="#ffffff",
-            padding=(20, 12),
-            font=("Segoe UI", 11, "bold"),
-            focusthickness=2,
-            focuscolor=accent,
-        )
-        style.map(
-            "Accent.TButton",
-            background=[("active", "#06b6d4"), ("pressed", "#0e7490"), ("disabled", "#334155")],
-            foreground=[("disabled", "#94a3b8")],
-        )
-        style.configure("TCheckbutton", background=bg, foreground=fg, padding=(_PX_NEAR, _PX_MICRO))
-        style.configure("TEntry", fieldbackground=card, foreground=fg, insertcolor=fg)
-        style.configure("TCombobox", fieldbackground=card, foreground=fg, padding=6, insertcolor=fg)
-        style.configure("TSpinbox", fieldbackground=card, foreground=fg, padding=6, insertcolor=fg)
-        style.configure(
-            "Treeview",
-            background=card,
-            foreground=fg,
-            fieldbackground=card,
-            rowheight=38,
-            font=("Segoe UI", 10),
-            borderwidth=0,
-        )
-        style.configure(
-            "Treeview.Heading",
-            background=btn_bg,
-            foreground=fg,
-            font=("Segoe UI", 10, "bold"),
-            relief="flat",
-            padding=(_PX_NEAR, _PX_MICRO + 2),
-        )
-        style.map(
-            "Treeview",
-            background=[("selected", "#0e7490")],
-            foreground=[("selected", "#f0fdfa")],
-        )
-        style.configure("TPanedwindow", background=bg)
-        style.configure("TSeparator", background="#334155")
-        style.configure("Horizontal.TScale", background=bg, troughcolor=btn_bg)
-
-        # Sidebar buttons
-        style.configure(
-            "Sidebar.TButton",
-            background=_SIDEBAR_BG,
-            foreground=_SIDEBAR_FG,
-            font=("Segoe UI", 10),
-            padding=(_PX_SECTION, _PX_NEAR),
-            anchor="w",
-            relief="flat",
-            borderwidth=0,
-        )
-        style.map(
-            "Sidebar.TButton",
-            background=[("active", _SIDEBAR_HOVER), ("pressed", _SIDEBAR_HOVER)],
-            foreground=[("active", "#e2e8f0")],
-        )
-        style.configure(
-            "SidebarActive.TButton",
-            background=_SIDEBAR_ACTIVE,
-            foreground=_SIDEBAR_ACTIVE_FG,
-            font=("Segoe UI", 10, "bold"),
-            padding=(_PX_SECTION, _PX_NEAR),
-            anchor="w",
-            relief="flat",
-            borderwidth=0,
-        )
-        style.map(
-            "SidebarActive.TButton",
-            background=[("active", "#0e7490"), ("pressed", "#155e75")],
-        )
-
-        # Status bar
-        style.configure("Status.TLabel", background=_STATUS_BG, foreground=_STATUS_FG, font=("Segoe UI", 9))
-        style.configure("Status.TFrame", background=_STATUS_BG)
-
-        # Notebook tabs — flatter, more modern
-        style.configure("TNotebook", borderwidth=0, padding=0, background=bg)
-        style.configure(
-            "TNotebook.Tab",
-            background=bg,
-            foreground=hint,
-            padding=(_PX_SECTION, _PX_NEAR),
-            font=("Segoe UI", 10),
-            borderwidth=0,
-        )
-        style.map(
-            "TNotebook.Tab",
-            background=[("selected", card), ("active", btn_bg)],
-            foreground=[("selected", accent)],
-        )
-
-        return _GuiTheme(
-            text_bg=card,
-            text_fg=fg,
-            hint_fg=hint,
-            is_dark=True,
-            card_style="Cardlike.TFrame",
-            checkbutton_style="TCheckbutton",
-            secondary_button_style="TButton",
-            log_fg=log_muted,
-            accent_strip=accent,
-            urls_inset_bg=inset,
-        )
+def _configure_modern_theme(root: tk.Tk) -> StudioTheme:
+    """Tema Editing Bay (musgo/ink) via app.gui.studio_theme."""
+    return configure_studio_theme(root)
 
 
 def _configure_ui_fonts(root: tk.Tk) -> None:
-    try:
-        ui = tkfont.nametofont("TkDefaultFont")
-        fixed = tkfont.nametofont("TkFixedFont")
-        if sys.platform == "win32":
-            ui.configure(family="Segoe UI", size=10)
-            fixed.configure(family="Consolas", size=10)
-        elif sys.platform == "darwin":
-            ui.configure(family=".SF NS Text", size=11)
-            fixed.configure(family="Menlo", size=10)
-        else:
-            ui.configure(family="Ubuntu", size=10)
-        fam = str(ui.cget("family"))
-        sz = int(ui.cget("size"))
-        if " " in fam:
-            root.option_add("*Font", f"{{{fam}}} {sz}")
-        else:
-            root.option_add("*Font", f"{fam} {sz}")
-
-        families = set(tkfont.families(root))
-        mono_candidates = (
-            "JetBrains Mono",
-            "Cascadia Mono",
-            "Source Code Pro",
-            "Fira Code",
-            "Noto Sans Mono",
-            "Ubuntu Mono",
-            "DejaVu Sans Mono",
-            "Liberation Mono",
-            "monospace",
-        )
-        for mono in mono_candidates:
-            if mono == "monospace" or mono in families:
-                try:
-                    fixed.configure(family=mono, size=10)
-                except tk.TclError:
-                    continue
-                break
-    except tk.TclError:
-        pass
+    configure_ui_fonts(root)
 
 
 class CortesApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("Geradores de conteúdo — Cortes, Quiz & TTS")
+        self.title("Studio Cortes — Editing Bay")
         _configure_ui_fonts(self)
         self._theme = _configure_modern_theme(self)
         self._text_bg = self._theme.text_bg
@@ -555,27 +236,32 @@ class CortesApp(tk.Tk):
         self._log_fg = self._theme.log_fg
         self._urls_ph_visible = False
         self._sidebar_buttons: list[ttk.Button] = []
+        self._photos: list[tk.PhotoImage] = []  # evita GC dos PhotoImage
         self._status_var = tk.StringVar(value="Pronto")
-        try:
-            st = ttk.Style(self)
-            rbg = st.lookup("TFrame", "background")
-            if rbg:
-                self.configure(background=rbg)
-        except tk.TclError:
-            self.configure(background="#0f172a")
-        self.minsize(960, 680)
-        self.geometry("1200x900")
+        self.configure(background=INK)
+        self.minsize(1080, 720)
+        self.geometry("1280x900")
 
         self._video_path = tk.StringVar()
         self._video_paths: list[str] = []
         self._lang = tk.StringVar(value="pt")
         self._position = tk.StringVar(value="bottom")
-        self._font = tk.StringVar(value="Arial")
+        self._font = tk.StringVar(value=(_cfg.TIKTOK_SUBTITLE_FONT or "Montserrat").strip() or "Montserrat")
         self._color = tk.StringVar(value="#FFFF00")
         self._bg_color = tk.StringVar(value="#000000")
         self._opacity = tk.IntVar(value=75)
         self._dub_to = tk.StringVar(value="off")  # off | en | pt
         self._tts_voice = tk.StringVar(value="")
+        # Melhorias do checklist (defaults = config/.env atual)
+        _tb = (_cfg.TRANSCRIBE_BACKEND or "local").strip().lower()
+        self._transcribe_backend = tk.StringVar(value=_tb if _tb in ("local", "groq") else "local")
+        self._karaoke = tk.BooleanVar(value=bool(_cfg.SUBTITLE_KARAOKE))
+        self._visual_grade = tk.BooleanVar(value=bool(_cfg.VISUAL_GRADE))
+        self._visual_progress = tk.BooleanVar(value=bool(_cfg.VISUAL_PROGRESS_BAR))
+        self._visual_watermark = tk.StringVar(value=str(_cfg.VISUAL_WATERMARK_TEXT or ""))
+        self._prefer_local_tts = tk.BooleanVar(value=bool(_cfg.LOCAL_TTS_PREFERRED))
+        self._smart_crop = tk.BooleanVar(value=bool(_cfg.SMART_CROP_ENABLED))
+        self._use_gpu_encode = tk.BooleanVar(value=bool(_cfg.USE_GPU_CLIP_ENCODE))
         self._log_q: queue.Queue = queue.Queue()
         self._last_pipeline_error: str | None = None
         self._worker: threading.Thread | None = None
@@ -630,19 +316,44 @@ class CortesApp(tk.Tk):
     def _remember_idle(self, w: tk.Widget, state: str) -> None:
         self._idle_states[w] = state
 
-    def _make_section(self, parent: tk.Misc, title: str, icon: str) -> ttk.Frame:
-        """Card com título + separador; retorna o frame do corpo (conteúdo)."""
-        card = ttk.Frame(
-            parent,
+    def _keep_photo(self, img: tk.PhotoImage | None) -> tk.PhotoImage | None:
+        if img is not None:
+            self._photos.append(img)
+        return img
+
+    def _make_surface(self, parent: tk.Misc, *, expand: bool = False) -> ttk.Frame:
+        """Uma superfície única (borda suave) — agrupa conteúdo sem cards empilhados."""
+        wrap = tk.Frame(parent, bg=INK2, highlightthickness=1, highlightbackground=EDGE)
+        wrap.pack(fill=tk.BOTH if expand else tk.X, expand=expand, pady=(0, _PX_NEAR))
+        inner = ttk.Frame(
+            wrap,
             style=self._theme.card_style,
-            padding=(_PX_SECTION, _PX_SECTION - 4, _PX_SECTION, _PX_SECTION - 4),
+            padding=(_PX_SECTION, _PX_NEAR + 2, _PX_SECTION, _PX_SECTION - 2),
         )
-        card.pack(fill=tk.X, pady=(0, _PX_SECTION))
-        head = ttk.Frame(card)
+        inner.pack(fill=tk.BOTH, expand=True)
+        return inner
+
+    def _make_section(
+        self,
+        parent: tk.Misc,
+        title: str,
+        icon: str,
+        *,
+        compact: bool = False,
+    ) -> ttk.Frame:
+        """Bloco interno: só título + corpo (sem card/borda própria)."""
+        block = ttk.Frame(parent, style=self._theme.card_style)
+        block.pack(fill=tk.X, pady=(0, _PX_NEAR if compact else _PX_SECTION - 6))
+        head = ttk.Frame(block, style=self._theme.card_style)
         head.pack(fill=tk.X, pady=(0, _PX_MICRO))
-        ttk.Label(head, text=f"{icon}  {title}", style="Heading.TLabel").pack(anchor=tk.W)
-        ttk.Separator(card, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=(0, _PX_NEAR))
-        body = ttk.Frame(card)
+        ttk.Label(
+            head,
+            text=f"{icon}  {title}".upper() if compact else f"{icon}  {title}",
+            style="Section.TLabel" if compact else "Heading.TLabel",
+        ).pack(side=tk.LEFT, anchor=tk.W)
+        if not compact:
+            ttk.Separator(block, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=(0, _PX_NEAR))
+        body = ttk.Frame(block, style=self._theme.card_style)
         body.pack(fill=tk.BOTH, expand=True)
         return body
 
@@ -711,84 +422,115 @@ class CortesApp(tk.Tk):
         cb_st = self._theme.checkbutton_style
         base = tkfont.nametofont("TkDefaultFont").actual()
 
-        self._top_strip = tk.Frame(
-            self, height=3, bg=self._theme.accent_strip, borderwidth=0, highlightthickness=0
-        )
-        self._top_strip.pack(side=tk.TOP, fill=tk.X)
+        # --- Fundo atmosférico (canvas) ---
+        self._bg_canvas = tk.Canvas(self, highlightthickness=0, bd=0, bg=INK)
+        self._bg_canvas.place(x=0, y=0, relwidth=1, relheight=1)
+        self._bg_photo = self._keep_photo(load_photo_resized("bg_app.png", (1600, 1000), master=self))
+        if self._bg_photo is not None:
+            self._bg_canvas_img = self._bg_canvas.create_image(0, 0, anchor=tk.NW, image=self._bg_photo)
+        else:
+            self._bg_canvas_img = None
+        self.bind("<Configure>", self._on_root_configure, add="+")
 
-        # --- Body: sidebar (left) + content (right) ---
-        body = ttk.Frame(self)
-        body.pack(fill=tk.BOTH, expand=True)
+        shell = tk.Frame(self, bg=INK, highlightthickness=0)
+        shell.place(x=0, y=0, relwidth=1, relheight=1)
 
-        # ===== Sidebar =====
-        sidebar = tk.Frame(body, width=220, bg=_SIDEBAR_BG, borderwidth=0, highlightthickness=0)
-        sidebar.pack(side=tk.LEFT, fill=tk.Y)
-        sidebar.pack_propagate(False)
-
-        # App title in sidebar
-        sp_top = tk.Frame(sidebar, bg=_SIDEBAR_BG, height=_PX_HERO + _PX_SECTION + 4)
-        sp_top.pack(fill=tk.X)
-        sp_top.pack_propagate(False)
-        title_f = tkfont.Font(self, family=base["family"], size=15, weight="bold")
+        # --- Header ---
+        header = tk.Frame(shell, height=64, bg=INK2, highlightthickness=0)
+        header.pack(side=tk.TOP, fill=tk.X)
+        header.pack_propagate(False)
+        hdr_img = self._keep_photo(load_photo_resized("header_bar.png", (1600, 64), master=self))
+        if hdr_img is not None:
+            tk.Label(header, image=hdr_img, bg=INK2, bd=0).place(x=0, y=0, relwidth=1, relheight=1)
+        logo = self._keep_photo(load_photo("logo_48.png", master=self))
+        brand_row = tk.Frame(header, bg=INK2)
+        brand_row.pack(side=tk.LEFT, padx=(_PX_SECTION, 0), pady=8)
+        if logo is not None:
+            tk.Label(brand_row, image=logo, bg=INK2, bd=0).pack(side=tk.LEFT, padx=(0, 12))
+        brand_txt = tk.Frame(brand_row, bg=INK2)
+        brand_txt.pack(side=tk.LEFT)
         tk.Label(
-            sp_top,
-            text="Studio Cortes",
-            font=title_f,
-            bg=_SIDEBAR_BG,
-            fg="#f0fdfa",
+            brand_txt,
+            text="STUDIO CORTES",
+            bg=INK2,
+            fg=TEXT,
+            font=(base["family"], 14, "bold"),
             anchor=tk.W,
-            padx=_PX_SECTION,
-        ).pack(fill=tk.X, pady=(_PX_HERO, 0))
+        ).pack(anchor=tk.W)
         tk.Label(
-            sp_top,
-            text="Conteúdo viral com IA",
-            bg=_SIDEBAR_BG,
-            fg=_SIDEBAR_FG,
+            brand_txt,
+            text="Editing Bay  ·  cortes virais com IA",
+            bg=INK2,
+            fg=MUTED,
             font=(base["family"], 8),
             anchor=tk.W,
-            padx=_PX_SECTION,
-        ).pack(fill=tk.X, pady=(_PX_MICRO, 0))
+        ).pack(anchor=tk.W)
+        tk.Frame(header, width=3, bg=MOSS, bd=0).pack(side=tk.LEFT, fill=tk.Y, padx=(18, 0), pady=14)
 
-        # Nav buttons
-        nav_data = [
-            (f"{_IC_VIDEO}  Cortes Virais", 0),
-            (f"{_IC_QUIZ}  Máquina de Quizzes", 1),
-            (f"{_IC_BATALHA}  Batalha 1v1", 2),
-            (f"{_IC_HISTORIA}  História", 3),
-            (f"{_IC_SPEAKER}  Text-to-Speech", 4),
-        ]
-        nav_wrap = tk.Frame(sidebar, bg=_SIDEBAR_BG)
+        # --- Body ---
+        body = tk.Frame(shell, bg=INK, highlightthickness=0)
+        body.pack(fill=tk.BOTH, expand=True)
+
+        # Sidebar com textura
+        sidebar = tk.Frame(body, width=232, bg=INK2, highlightthickness=0)
+        sidebar.pack(side=tk.LEFT, fill=tk.Y)
+        sidebar.pack_propagate(False)
+        side_bg = self._keep_photo(load_photo_resized("sidebar_bg.png", (232, 1000), master=self))
+        if side_bg is not None:
+            tk.Label(sidebar, image=side_bg, bg=INK2, bd=0).place(x=0, y=0, relwidth=1, relheight=1)
+
+        nav_wrap = tk.Frame(sidebar, bg=INK2)
         nav_wrap.pack(fill=tk.X, pady=(_PX_SECTION, 0))
+        tk.Label(
+            nav_wrap,
+            text="ESPAÇOS",
+            bg=INK2,
+            fg=MUTED_SOFT,
+            font=(base["family"], 8, "bold"),
+            anchor=tk.W,
+            padx=_PX_SECTION,
+        ).pack(fill=tk.X, pady=(0, _PX_NEAR))
+
+        nav_data = [
+            ("Cortes Virais", 0),
+            ("Máquina de Quizzes", 1),
+            ("Batalha 1v1", 2),
+            ("História", 3),
+            ("Text-to-Speech", 4),
+        ]
+        self._nav_idle = self._keep_photo(load_photo_resized("nav_idle.png", (220, 44), master=self))
+        self._nav_active = self._keep_photo(load_photo_resized("nav_active.png", (220, 44), master=self))
         for label, idx in nav_data:
             btn = ttk.Button(
                 nav_wrap,
-                text=label,
+                text=f"  {label}",
                 command=lambda i=idx: self._select_sidebar_tab(i),
                 style="SidebarActive.TButton" if idx == 0 else "Sidebar.TButton",
             )
-            btn.pack(fill=tk.X, pady=(0, 2))
+            btn.pack(fill=tk.X, padx=6, pady=2)
             self._sidebar_buttons.append(btn)
 
-        # Spacer + utility buttons at bottom of sidebar
-        tk.Frame(sidebar, bg=_SIDEBAR_BG).pack(fill=tk.BOTH, expand=True)
-        bottom_wrap = tk.Frame(sidebar, bg=_SIDEBAR_BG, padx=_PX_SECTION, pady=_PX_SECTION)
+        tk.Frame(sidebar, bg=INK2).pack(fill=tk.BOTH, expand=True)
+        bottom_wrap = tk.Frame(sidebar, bg=INK2, padx=_PX_NEAR, pady=_PX_SECTION)
         bottom_wrap.pack(fill=tk.X, side=tk.BOTTOM)
         ttk.Button(
             bottom_wrap,
-            text=f"{_IC_FOLDER}  Abrir resultados",
+            text="Abrir resultados",
             command=lambda: _open_folder(OUTPUT_DIR),
             style=sec,
         ).pack(fill=tk.X, pady=(0, _PX_MICRO))
         ttk.Button(
             bottom_wrap,
-            text=f"{_IC_LOG}  Limpar log",
+            text="Limpar log",
             command=self._clear_log,
             style=sec,
         ).pack(fill=tk.X)
 
-        # ===== Content area =====
-        content = ttk.Frame(body, padding=(_PX_SECTION, _PX_SECTION, _PX_SECTION, _PX_SECTION))
-        content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        # Content
+        content_outer = tk.Frame(body, bg=INK, highlightthickness=0)
+        content_outer.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        content = ttk.Frame(content_outer, style="Content.TFrame", padding=(_PX_SECTION, _PX_NEAR, _PX_SECTION, _PX_SECTION))
+        content.pack(fill=tk.BOTH, expand=True)
 
         self._notebook = ttk.Notebook(content)
         self._notebook.pack(fill=tk.BOTH, expand=True)
@@ -798,11 +540,11 @@ class CortesApp(tk.Tk):
         tab_batalha = ttk.Frame(self._notebook, padding=(_PX_SECTION, _PX_NEAR, _PX_SECTION, _PX_SECTION))
         tab_historia = ttk.Frame(self._notebook, padding=(_PX_SECTION, _PX_NEAR, _PX_SECTION, _PX_SECTION))
         tab_tts = ttk.Frame(self._notebook, padding=(_PX_SECTION, _PX_NEAR, _PX_SECTION, _PX_SECTION))
-        self._notebook.add(tab_cortes, text=f"  {_IC_VIDEO}  Cortes Virais  ")
-        self._notebook.add(tab_quiz, text=f"  {_IC_QUIZ}  Quiz  ")
-        self._notebook.add(tab_batalha, text=f"  {_IC_BATALHA}  Batalha  ")
-        self._notebook.add(tab_historia, text=f"  {_IC_HISTORIA}  História  ")
-        self._notebook.add(tab_tts, text=f"  {_IC_SPEAKER}  TTS  ")
+        self._notebook.add(tab_cortes, text="  Cortes Virais  ")
+        self._notebook.add(tab_quiz, text="  Quiz  ")
+        self._notebook.add(tab_batalha, text="  Batalha  ")
+        self._notebook.add(tab_historia, text="  História  ")
+        self._notebook.add(tab_tts, text="  TTS  ")
 
         self._build_tab_cortes(tab_cortes, sec=sec, base=base)
         self._build_tab_quiz(tab_quiz, sec=sec, base=base)
@@ -812,10 +554,10 @@ class CortesApp(tk.Tk):
 
         self._notebook.bind("<<NotebookTabChanged>>", self._on_notebook_tab_changed)
 
-        # --- Execução global (cancelar, progresso) ---
-        f_run_body = self._make_section(content, "Execução", _IC_RUN)
-        f_primary = ttk.Frame(f_run_body)
-        f_primary.pack(fill=tk.X, pady=(0, _PX_NEAR))
+        run_surface = self._make_surface(content)
+        run_head = self._make_section(run_surface, "Execução e pós-processo", _IC_RUN, compact=True)
+        f_primary = ttk.Frame(run_head, style=self._theme.card_style)
+        f_primary.pack(fill=tk.X, pady=(0, _PX_MICRO))
         self._btn_cancel = ttk.Button(
             f_primary,
             text="Cancelar processamento",
@@ -824,46 +566,42 @@ class CortesApp(tk.Tk):
             style=sec,
         )
         self._btn_cancel.pack(side=tk.LEFT)
-
-        prog_wrap = ttk.Frame(f_run_body)
-        prog_wrap.pack(fill=tk.X, pady=(_PX_NEAR, 0))
-        track_bg = "#1f252d" if self._is_dark_theme else "#d8dee9"
-        self._prog_track = tk.Frame(prog_wrap, height=8, bg=track_bg, highlightthickness=0)
-        self._prog_track.pack(fill=tk.X)
-        self._prog_fill = tk.Frame(self._prog_track, height=8, bg="#22c55e", highlightthickness=0)
-
-        # --- Ao concluir ---
-        f_post_body = self._make_section(content, "Ao concluir", _IC_DONE)
-        f_opts = ttk.Frame(f_post_body)
-        f_opts.pack(fill=tk.X, pady=(_PX_MICRO, 0))
+        f_opts = ttk.Frame(f_primary, style=self._theme.card_style)
+        f_opts.pack(side=tk.LEFT, padx=(_PX_SECTION, 0))
         ttk.Checkbutton(
             f_opts,
-            text="Abrir pasta resultados ao terminar",
+            text="Abrir resultados",
             variable=self._open_results_when_done,
             style=cb_st,
-        ).pack(side=tk.LEFT, padx=(0, _PX_SECTION))
+        ).pack(side=tk.LEFT, padx=(0, _PX_NEAR))
         ttk.Checkbutton(
             f_opts,
-            text="Notificação ao terminar",
+            text="Notificar",
             variable=self._notify_when_done,
             style=cb_st,
-        ).pack(side=tk.LEFT, padx=(0, _PX_SECTION))
+        ).pack(side=tk.LEFT, padx=(0, _PX_NEAR))
         ttk.Checkbutton(
             f_opts,
-            text="Gerar .zip do pacote ao terminar",
+            text="Exportar .zip",
             variable=self._zip_when_done,
             style=cb_st,
         ).pack(side=tk.LEFT)
 
-        # --- Log + resultados (globais, fora do Notebook) ---
-        self._pw_results_log = ttk.Panedwindow(content, orient=tk.VERTICAL)
-        self._pw_results_log.pack(fill=tk.BOTH, expand=True, pady=(_PX_SECTION, 0))
+        prog_wrap = ttk.Frame(run_head, style=self._theme.card_style)
+        prog_wrap.pack(fill=tk.X, pady=(_PX_MICRO, 0))
+        self._prog_track = tk.Frame(prog_wrap, height=8, bg=INK, highlightthickness=0)
+        self._prog_track.pack(fill=tk.X)
+        self._prog_fill = tk.Frame(self._prog_track, height=8, bg=MOSS, highlightthickness=0)
+
+        results_surface = self._make_surface(content, expand=True)
+        self._pw_results_log = ttk.Panedwindow(results_surface, orient=tk.VERTICAL)
+        self._pw_results_log.pack(fill=tk.BOTH, expand=True)
 
         lf = ttk.Frame(
-            self._pw_results_log, style=self._theme.card_style, padding=(_PX_SECTION, _PX_SECTION)
+            self._pw_results_log, style=self._theme.card_style, padding=(0, 0, 0, _PX_NEAR)
         )
         f_last = ttk.Frame(
-            self._pw_results_log, style=self._theme.card_style, padding=(_PX_SECTION, _PX_SECTION)
+            self._pw_results_log, style=self._theme.card_style, padding=(0, _PX_NEAR, 0, 0)
         )
         try:
             self._pw_results_log.add(lf, weight=2)
@@ -873,15 +611,14 @@ class CortesApp(tk.Tk):
             self._pw_results_log.add(f_last)
 
         for pane, title, icon in (
-            (lf, "Log da execução", _IC_LOG),
-            (f_last, "Resultados — vídeos e legendas", _IC_CLIPBOARD),
+            (lf, "Log", _IC_LOG),
+            (f_last, "Resultados", _IC_CLIPBOARD),
         ):
-            ph = ttk.Frame(pane)
-            ph.pack(fill=tk.X, pady=(0, _PX_NEAR))
-            ttk.Label(ph, text=f"{icon}  {title}", style="Heading.TLabel").pack(anchor=tk.W)
-            ttk.Separator(pane, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=(0, _PX_NEAR))
+            ph = ttk.Frame(pane, style=self._theme.card_style)
+            ph.pack(fill=tk.X, pady=(0, _PX_MICRO))
+            ttk.Label(ph, text=f"{icon}  {title}", style="Section.TLabel").pack(anchor=tk.W)
 
-        log_row = ttk.Frame(lf)
+        log_row = ttk.Frame(lf, style=self._theme.card_style)
         log_row.pack(fill=tk.BOTH, expand=True)
         self._log = tk.Text(
             log_row,
@@ -894,6 +631,8 @@ class CortesApp(tk.Tk):
             padx=14,
             pady=12,
             highlightthickness=1,
+            highlightbackground=EDGE,
+            highlightcolor=MOSS,
         )
         sy = ttk.Scrollbar(log_row, orient=tk.VERTICAL, command=self._log.yview)
         self._log.configure(yscrollcommand=sy.set)
@@ -901,13 +640,14 @@ class CortesApp(tk.Tk):
         sy.pack(side=tk.RIGHT, fill=tk.Y)
         self._log.insert(
             tk.END,
-            "Progresso de qualquer aba aparece aqui (downloads, transcrição, quiz, FFmpeg).\n"
-            "Use os botões «Gerar» na aba correspondente (clipes, quiz, batalha, história, MP3).\n\n",
+            "Bem-vindo ao Editing Bay.\n"
+            "Progresso de qualquer aba aparece aqui (downloads, transcrição, FFmpeg).\n"
+            "Use «Gerar» na aba correspondente.\n\n",
         )
-        self._log.tag_configure("error", foreground="#f85149")
+        self._log.tag_configure("error", foreground="#E06A5C")
         self._log.configure(state=tk.DISABLED)
 
-        tree_row = ttk.Frame(f_last)
+        tree_row = ttk.Frame(f_last, style=self._theme.card_style)
         tree_row.pack(fill=tk.BOTH, expand=True)
         self._tree = ttk.Treeview(
             tree_row,
@@ -925,13 +665,13 @@ class CortesApp(tk.Tk):
         self._tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, _PX_MICRO))
         sy_t.pack(side=tk.RIGHT, fill=tk.Y)
 
-        f_btns = ttk.Frame(f_last)
+        f_btns = ttk.Frame(f_last, style=self._theme.card_style)
         f_btns.pack(fill=tk.X, pady=(_PX_SECTION, 0))
-        r_a = ttk.Frame(f_btns)
+        r_a = ttk.Frame(f_btns, style=self._theme.card_style)
         r_a.pack(fill=tk.X, pady=(0, _PX_NEAR))
         ttk.Button(
             r_a,
-            text=f"{_IC_CLIPBOARD}  Copiar legenda (selecionado)",
+            text="Copiar legenda (selecionado)",
             command=self._copy_caption_selected,
             style=sec,
         ).pack(side=tk.LEFT, padx=(0, _PX_NEAR), pady=_PX_MICRO)
@@ -941,13 +681,30 @@ class CortesApp(tk.Tk):
             command=self._copy_path_selected,
             style=sec,
         ).pack(side=tk.LEFT, padx=(0, _PX_NEAR), pady=_PX_MICRO)
-        ttk.Button(
-            r_a,
-            text="Postar no TikTok (selecionado)",
-            command=self._post_to_tiktok_selected,
-            style=sec,
-        ).pack(side=tk.LEFT, padx=(0, _PX_NEAR), pady=_PX_MICRO)
-        r_b = ttk.Frame(f_btns)
+
+        self._img_tiktok = self._keep_photo(load_photo_resized("btn_tiktok.png", (220, 44), master=self))
+        if self._img_tiktok is not None:
+            btn_tt = tk.Button(
+                r_a,
+                image=self._img_tiktok,
+                command=self._post_to_tiktok_selected,
+                bd=0,
+                highlightthickness=0,
+                bg=PANEL,
+                activebackground=PANEL,
+                cursor="hand2",
+            )
+            btn_tt.pack(side=tk.LEFT, padx=(0, _PX_NEAR), pady=_PX_MICRO)
+            self._remember_idle(btn_tt, "normal")
+        else:
+            ttk.Button(
+                r_a,
+                text="Postar no TikTok (selecionado)",
+                command=self._post_to_tiktok_selected,
+                style=sec,
+            ).pack(side=tk.LEFT, padx=(0, _PX_NEAR), pady=_PX_MICRO)
+
+        r_b = ttk.Frame(f_btns, style=self._theme.card_style)
         r_b.pack(fill=tk.X)
         ttk.Button(
             r_b,
@@ -962,8 +719,7 @@ class CortesApp(tk.Tk):
             style=sec,
         ).pack(side=tk.LEFT, padx=(0, _PX_NEAR), pady=_PX_MICRO)
 
-        # ===== Status bar =====
-        status_bar = ttk.Frame(self, style="Status.TFrame")
+        status_bar = ttk.Frame(shell, style="Status.TFrame")
         status_bar.pack(side=tk.BOTTOM, fill=tk.X)
         ttk.Label(
             status_bar,
@@ -971,44 +727,76 @@ class CortesApp(tk.Tk):
             style="Status.TLabel",
             padding=(_PX_SECTION, _PX_MICRO + 2),
         ).pack(side=tk.LEFT)
+        tk.Label(
+            status_bar,
+            text="Editing Bay",
+            bg=STATUS_BG,
+            fg=MOSS,
+            font=(base["family"], 8, "bold"),
+            padx=_PX_SECTION,
+        ).pack(side=tk.RIGHT)
 
         self._apply_text_widget_theme()
         if self._urls_ph_visible:
             self._txt_urls.configure(foreground=self._hint_fg)
         self._toggle_tts()
 
+    def _on_root_configure(self, event: tk.Event | None = None) -> None:
+        if event is not None and event.widget is not self:
+            return
+        if getattr(self, "_bg_photo", None) is None or getattr(self, "_bg_canvas_img", None) is None:
+            return
+        try:
+            w = max(800, int(self.winfo_width()))
+            h = max(600, int(self.winfo_height()))
+        except tk.TclError:
+            return
+        # Reescala ocasionalmente (throttle)
+        key = (w // 40, h // 40)
+        if getattr(self, "_bg_scale_key", None) == key:
+            return
+        self._bg_scale_key = key
+        img = self._keep_photo(load_photo_resized("bg_app.png", (w, h), master=self))
+        if img is None:
+            return
+        self._bg_photo = img
+        self._bg_canvas.itemconfigure(self._bg_canvas_img, image=img)
+        self._bg_canvas.coords(self._bg_canvas_img, 0, 0)
+
     def _build_tab_cortes(self, parent: ttk.Frame, *, sec: str, base: dict) -> None:
-        """Aba 1 — inputs do pipeline de cortes virais."""
-        cols = ttk.Frame(parent)
+        """Aba 1 — inputs do pipeline de cortes virais (uma superfície, blocos internos)."""
+        surface = self._make_surface(parent)
+        cb_st = self._theme.checkbutton_style
+
+        cols = ttk.Frame(surface, style=self._theme.card_style)
         cols.pack(fill=tk.X, expand=False)
         cols.columnconfigure(0, weight=1, uniform="topcols")
         cols.columnconfigure(1, weight=1, uniform="topcols")
-        left = ttk.Frame(cols)
-        left.grid(row=0, column=0, sticky=tk.NSEW, padx=(0, _PX_NEAR))
-        right = ttk.Frame(cols)
-        right.grid(row=0, column=1, sticky=tk.NSEW, padx=(_PX_NEAR, 0))
+        left = ttk.Frame(cols, style=self._theme.card_style)
+        left.grid(row=0, column=0, sticky=tk.NSEW, padx=(0, _PX_SECTION))
+        right = ttk.Frame(cols, style=self._theme.card_style)
+        right.grid(row=0, column=1, sticky=tk.NSEW)
 
-        v_body = self._make_section(left, "Vídeo de entrada", _IC_VIDEO)
-        row = ttk.Frame(v_body)
+        v_body = self._make_section(left, "Vídeo de entrada", _IC_VIDEO, compact=True)
+        row = ttk.Frame(v_body, style=self._theme.card_style)
         row.pack(fill=tk.X, pady=(0, _PX_NEAR))
         self._btn_pick = ttk.Button(
             row,
-            text=f"{_IC_FOLDER}  Escolher arquivo(s)…",
+            text="Escolher arquivo(s)…",
             command=self._pick_video,
             style=sec,
         )
         self._btn_pick.pack(side=tk.LEFT)
         self._remember_idle(self._btn_pick, "normal")
-        self._lbl_video = ttk.Label(row, textvariable=self._video_path, wraplength=380)
+        self._lbl_video = ttk.Label(row, textvariable=self._video_path, wraplength=380, style="Field.TLabel")
         self._lbl_video.pack(side=tk.LEFT, padx=(_PX_NEAR, 0), fill=tk.X, expand=True)
 
-        tip_row = ttk.Frame(v_body)
-        tip_row.pack(fill=tk.X, pady=(_PX_NEAR + 2, _PX_MICRO))
+        tip_row = ttk.Frame(v_body, style=self._theme.card_style)
+        tip_row.pack(fill=tk.X, pady=(0, _PX_MICRO))
         ttk.Label(
             tip_row,
-            text="URLs opcionais — uma por linha.",
-            font=(base["family"], 8),
-            foreground=_MUTED_NOTE_FG,
+            text="URLs opcionais — uma por linha",
+            style="Field.TLabel",
         ).pack(side=tk.LEFT)
         ttk.Button(
             tip_row,
@@ -1028,7 +816,9 @@ class CortesApp(tk.Tk):
             borderwidth=0,
             padx=12,
             pady=10,
-            highlightthickness=0,
+            highlightthickness=1,
+            highlightbackground=EDGE,
+            highlightcolor=MOSS,
         )
         self._txt_urls.pack(fill=tk.BOTH, expand=False)
         self._remember_idle(self._txt_urls, tk.NORMAL)
@@ -1037,84 +827,70 @@ class CortesApp(tk.Tk):
         self._txt_urls.bind("<FocusIn>", self._urls_focus_in)
         self._txt_urls.bind("<FocusOut>", self._urls_focus_out)
 
-        # --- Coluna direita: legendas + dublagem ---
-        f_sub = self._make_section(right, "Legendas no vídeo", _IC_SETTINGS)
+        # Direita: legendas + dublagem no mesmo fluxo
+        f_sub = self._make_section(right, "Legendas", _IC_SETTINGS, compact=True)
 
-        row_lang_pos = ttk.Frame(f_sub)
-        row_lang_pos.pack(anchor=tk.W, fill=tk.X, pady=(0, _PX_NEAR))
-        blk_lang = ttk.Frame(row_lang_pos)
-        blk_lang.pack(side=tk.LEFT, padx=(0, _PX_SECTION))
-        ttk.Label(blk_lang, text="Idioma").pack(anchor=tk.W)
-        self._cb_lang = ttk.Combobox(
-            blk_lang,
-            textvariable=self._lang,
-            values=("pt", "en"),
-            state="readonly",
-            width=10,
-        )
-        self._cb_lang.pack(anchor=tk.W, pady=(_PX_MICRO, 0))
-        self._remember_idle(self._cb_lang, "readonly")
+        grid = ttk.Frame(f_sub, style=self._theme.card_style)
+        grid.pack(fill=tk.X, pady=(0, _PX_NEAR))
+        for col, (label, var, values, width, attr) in enumerate((
+            ("Idioma", self._lang, ("pt", "en"), 8, "_cb_lang"),
+            ("Posição", self._position, ("bottom", "top"), 10, "_cb_position"),
+        )):
+            blk = ttk.Frame(grid, style=self._theme.card_style)
+            blk.pack(side=tk.LEFT, padx=(0, _PX_NEAR))
+            ttk.Label(blk, text=label, style="Field.TLabel").pack(anchor=tk.W)
+            cb = ttk.Combobox(
+                blk,
+                textvariable=var,
+                values=values,
+                state="readonly",
+                width=width,
+            )
+            cb.pack(anchor=tk.W, pady=(_PX_MICRO, 0))
+            self._remember_idle(cb, "readonly")
+            setattr(self, attr, cb)
 
-        blk_pos = ttk.Frame(row_lang_pos)
-        blk_pos.pack(side=tk.LEFT)
-        ttk.Label(blk_pos, text="Posição").pack(anchor=tk.W)
-        self._cb_position = ttk.Combobox(
-            blk_pos,
-            textvariable=self._position,
-            values=("bottom", "top"),
-            state="readonly",
-            width=12,
-        )
-        self._cb_position.pack(anchor=tk.W, pady=(_PX_MICRO, 0))
-        self._remember_idle(self._cb_position, "readonly")
-
-        blk_font = ttk.Frame(f_sub)
+        blk_font = ttk.Frame(f_sub, style=self._theme.card_style)
         blk_font.pack(anchor=tk.W, fill=tk.X, pady=(0, _PX_NEAR))
-        ttk.Label(blk_font, text="Fonte").pack(anchor=tk.W)
+        ttk.Label(blk_font, text="Fonte", style="Field.TLabel").pack(anchor=tk.W)
         self._ent_font = ttk.Entry(blk_font, textvariable=self._font, width=28)
         self._ent_font.pack(anchor=tk.W, fill=tk.X, pady=(_PX_MICRO, 0))
         self._remember_idle(self._ent_font, "normal")
 
-        blk_colors = ttk.Frame(f_sub)
+        blk_colors = ttk.Frame(f_sub, style=self._theme.card_style)
         blk_colors.pack(anchor=tk.W, fill=tk.X, pady=(0, _PX_NEAR))
-        c_txt = ttk.Frame(blk_colors)
+        c_txt = ttk.Frame(blk_colors, style=self._theme.card_style)
         c_txt.pack(side=tk.LEFT, padx=(0, _PX_SECTION))
-        ttk.Label(c_txt, text="Cor do texto").pack(anchor=tk.W)
-        row_ct = ttk.Frame(c_txt)
+        ttk.Label(c_txt, text="Cor do texto", style="Field.TLabel").pack(anchor=tk.W)
+        row_ct = ttk.Frame(c_txt, style=self._theme.card_style)
         row_ct.pack(anchor=tk.W, pady=(_PX_MICRO, 0))
-        self._ent_color = ttk.Entry(row_ct, textvariable=self._color, width=12)
+        self._ent_color = ttk.Entry(row_ct, textvariable=self._color, width=10)
         self._ent_color.pack(side=tk.LEFT)
         self._btn_color_text = ttk.Button(
-            row_ct,
-            text="Paleta…",
-            command=lambda: self._pick_color(self._color),
-            style=sec,
+            row_ct, text="Paleta…", command=lambda: self._pick_color(self._color), style=sec,
         )
-        self._btn_color_text.pack(side=tk.LEFT, padx=(_PX_NEAR, 0))
+        self._btn_color_text.pack(side=tk.LEFT, padx=(_PX_MICRO, 0))
         self._remember_idle(self._ent_color, "normal")
         self._remember_idle(self._btn_color_text, "normal")
 
-        c_bg = ttk.Frame(blk_colors)
+        c_bg = ttk.Frame(blk_colors, style=self._theme.card_style)
         c_bg.pack(side=tk.LEFT)
-        ttk.Label(c_bg, text="Fundo").pack(anchor=tk.W)
-        row_cb = ttk.Frame(c_bg)
+        ttk.Label(c_bg, text="Fundo", style="Field.TLabel").pack(anchor=tk.W)
+        row_cb = ttk.Frame(c_bg, style=self._theme.card_style)
         row_cb.pack(anchor=tk.W, pady=(_PX_MICRO, 0))
-        self._ent_bg = ttk.Entry(row_cb, textvariable=self._bg_color, width=12)
+        self._ent_bg = ttk.Entry(row_cb, textvariable=self._bg_color, width=10)
         self._ent_bg.pack(side=tk.LEFT)
         self._btn_color_bg = ttk.Button(
-            row_cb,
-            text="Paleta…",
-            command=lambda: self._pick_color(self._bg_color),
-            style=sec,
+            row_cb, text="Paleta…", command=lambda: self._pick_color(self._bg_color), style=sec,
         )
-        self._btn_color_bg.pack(side=tk.LEFT, padx=(_PX_NEAR, 0))
+        self._btn_color_bg.pack(side=tk.LEFT, padx=(_PX_MICRO, 0))
         self._remember_idle(self._ent_bg, "normal")
         self._remember_idle(self._btn_color_bg, "normal")
 
-        op_block = ttk.Frame(f_sub)
-        op_block.pack(anchor=tk.W, fill=tk.X, pady=(_PX_NEAR, 0))
-        ttk.Label(op_block, text="Opacidade do fundo").pack(anchor=tk.W)
-        op_line = ttk.Frame(op_block)
+        op_block = ttk.Frame(f_sub, style=self._theme.card_style)
+        op_block.pack(anchor=tk.W, fill=tk.X)
+        ttk.Label(op_block, text="Opacidade do fundo", style="Field.TLabel").pack(anchor=tk.W)
+        op_line = ttk.Frame(op_block, style=self._theme.card_style)
         op_line.pack(fill=tk.X, pady=(_PX_MICRO, 0))
         self._sc_opacity = ttk.Scale(
             op_line,
@@ -1124,62 +900,126 @@ class CortesApp(tk.Tk):
             orient=tk.HORIZONTAL,
             command=self._on_opacity_scale,
             style="Horizontal.TScale",
-            length=220,
+            length=200,
         )
         self._sc_opacity.pack(side=tk.LEFT)
         self._remember_idle(self._sc_opacity, "normal")
-        self._lbl_opacity_pct = ttk.Label(op_line, text=f"{int(self._opacity.get())}%", width=6)
+        self._lbl_opacity_pct = ttk.Label(op_line, text=f"{int(self._opacity.get())}%", width=5, style="Field.TLabel")
         self._lbl_opacity_pct.pack(side=tk.LEFT, padx=(_PX_NEAR, 0))
 
-        # --- Dublagem ---
-        dub_body = self._make_section(right, "Dublagem (Edge-TTS)", _IC_MIC)
-        b_mode = ttk.Frame(dub_body)
-        b_mode.pack(anchor=tk.W, fill=tk.X, pady=(0, _PX_NEAR))
-        ttk.Label(b_mode, text="Modo").pack(anchor=tk.W)
+        dub_body = self._make_section(right, "Dublagem", _IC_MIC, compact=True)
+        dub_row = ttk.Frame(dub_body, style=self._theme.card_style)
+        dub_row.pack(fill=tk.X)
+        blk_mode = ttk.Frame(dub_row, style=self._theme.card_style)
+        blk_mode.pack(side=tk.LEFT, padx=(0, _PX_NEAR))
+        ttk.Label(blk_mode, text="Modo", style="Field.TLabel").pack(anchor=tk.W)
         self._cb_dub = ttk.Combobox(
-            b_mode,
+            blk_mode,
             textvariable=self._dub_to,
             values=("off", "en", "pt"),
             state="readonly",
-            width=12,
+            width=8,
         )
         self._cb_dub.pack(anchor=tk.W, pady=(_PX_MICRO, 0))
         self._remember_idle(self._cb_dub, "readonly")
         self._cb_dub.bind("<<ComboboxSelected>>", lambda _e: self._toggle_tts())
 
-        b_voice = ttk.Frame(dub_body)
-        b_voice.pack(anchor=tk.W, fill=tk.X, pady=(0, 0))
-        ttk.Label(b_voice, text="Voz TTS (opcional)").pack(anchor=tk.W)
-        self._ent_voice = ttk.Entry(b_voice, textvariable=self._tts_voice, width=28)
+        b_voice = ttk.Frame(dub_row, style=self._theme.card_style)
+        b_voice.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Label(b_voice, text="Voz TTS (opcional)", style="Field.TLabel").pack(anchor=tk.W)
+        self._ent_voice = ttk.Entry(b_voice, textvariable=self._tts_voice)
         self._ent_voice.pack(anchor=tk.W, fill=tk.X, pady=(_PX_MICRO, 0))
         self._remember_idle(self._ent_voice, "normal")
         self._lbl_voice_hint = ttk.Label(
-            b_voice,
-            text="Se vazio: voz padrão do projeto (.env / EDGE_TTS_VOICE).",
-            font=(base["family"], 8),
-            foreground=self._hint_fg,
-            wraplength=360,
+            dub_body,
+            text="Vazio → Kokoro (se ligado) ou Edge do .env",
+            style="Field.TLabel",
         )
         self._lbl_voice_hint.pack(anchor=tk.W, pady=(_PX_MICRO, 0))
 
-        run_row = ttk.Frame(parent)
-        run_row.pack(fill=tk.X, pady=(_PX_SECTION, 0))
-        ttk.Frame(run_row).pack(side=tk.LEFT, expand=True)
-        run_center = ttk.Frame(run_row)
-        run_center.pack(side=tk.LEFT)
-        ttk.Frame(run_row).pack(side=tk.LEFT, expand=True)
-        self._btn_run_cortes = ttk.Button(
-            run_center,
-            text=f"{_IC_RUN}  Gerar clipes",
-            command=self._start_cortes_job,
-            style="Accent.TButton",
+        # Melhorias — faixa compacta na mesma superfície
+        mel_body = self._make_section(surface, "Melhorias", _IC_SETTINGS, compact=True)
+        mel_top = ttk.Frame(mel_body, style=self._theme.card_style)
+        mel_top.pack(fill=tk.X, pady=(0, _PX_MICRO))
+        ttk.Label(mel_top, text="Transcrição", style="Field.TLabel").pack(side=tk.LEFT)
+        self._cb_transcribe = ttk.Combobox(
+            mel_top,
+            textvariable=self._transcribe_backend,
+            values=("local", "groq"),
+            state="readonly",
+            width=10,
         )
+        self._cb_transcribe.pack(side=tk.LEFT, padx=(_PX_NEAR, _PX_SECTION))
+        self._remember_idle(self._cb_transcribe, "readonly")
+        ttk.Label(mel_top, text="Watermark", style="Field.TLabel").pack(side=tk.LEFT)
+        self._ent_watermark = ttk.Entry(mel_top, textvariable=self._visual_watermark, width=16)
+        self._ent_watermark.pack(side=tk.LEFT, padx=(_PX_NEAR, _PX_NEAR))
+        self._remember_idle(self._ent_watermark, "normal")
+        self._btn_limpar_temp = ttk.Button(
+            mel_top,
+            text="Limpar temp/",
+            command=self._limpar_temp,
+            style=sec,
+        )
+        self._btn_limpar_temp.pack(side=tk.LEFT)
+        self._remember_idle(self._btn_limpar_temp, "normal")
+
+        mel_checks = ttk.Frame(mel_body, style=self._theme.card_style)
+        mel_checks.pack(fill=tk.X)
+        for text, var in (
+            ("Karaokê", self._karaoke),
+            ("Grade", self._visual_grade),
+            ("Barra", self._visual_progress),
+            ("Smart crop", self._smart_crop),
+            ("GPU encode", self._use_gpu_encode),
+            ("Kokoro na dub", self._prefer_local_tts),
+        ):
+            cb = ttk.Checkbutton(mel_checks, text=text, variable=var, style=cb_st)
+            cb.pack(side=tk.LEFT, padx=(0, _PX_NEAR))
+            self._remember_idle(cb, "normal")
+
+        run_row = ttk.Frame(surface, style=self._theme.card_style)
+        run_row.pack(fill=tk.X, pady=(_PX_NEAR, 0))
+        ttk.Frame(run_row, style=self._theme.card_style).pack(side=tk.LEFT, expand=True)
+        run_center = ttk.Frame(run_row, style=self._theme.card_style)
+        run_center.pack(side=tk.LEFT)
+        ttk.Frame(run_row, style=self._theme.card_style).pack(side=tk.LEFT, expand=True)
+        self._img_run = self._keep_photo(load_photo_resized("btn_accent.png", (280, 56), master=self))
+        self._img_run_hot = self._keep_photo(load_photo_resized("btn_accent_hot.png", (280, 56), master=self))
+        if self._img_run is not None:
+            self._btn_run_cortes = tk.Button(
+                run_center,
+                image=self._img_run,
+                command=self._start_cortes_job,
+                bd=0,
+                highlightthickness=0,
+                bg=PANEL,
+                activebackground=PANEL,
+                cursor="hand2",
+            )
+            if self._img_run_hot is not None:
+                self._btn_run_cortes.bind(
+                    "<Enter>",
+                    lambda _e: self._btn_run_cortes.configure(image=self._img_run_hot),
+                )
+                self._btn_run_cortes.bind(
+                    "<Leave>",
+                    lambda _e: self._btn_run_cortes.configure(image=self._img_run),
+                )
+        else:
+            self._btn_run_cortes = ttk.Button(
+                run_center,
+                text=f"{_IC_RUN}  Gerar clipes",
+                command=self._start_cortes_job,
+                style="Accent.TButton",
+            )
         self._btn_run_cortes.pack()
         self._remember_idle(self._btn_run_cortes, "normal")
 
     def _build_tab_quiz(self, parent: ttk.Frame, *, sec: str, base: dict) -> None:
         """Aba 2 — Máquina de Quizzes (projeto.md §13.3.1)."""
-        body = self._make_section(parent, "Configuração do quiz", _IC_QUIZ)
+        parent = self._make_surface(parent)
+        body = self._make_section(parent, "Configuração do quiz", _IC_QUIZ, compact=True)
 
         row_theme = ttk.Frame(body)
         row_theme.pack(fill=tk.X, pady=(0, _PX_NEAR))
@@ -1304,7 +1144,8 @@ class CortesApp(tk.Tk):
 
     def _build_tab_batalha(self, parent: ttk.Frame, *, sec: str, base: dict) -> None:
         """Aba Batalha 1v1 — duelo por física 2D (Pymunk + FFmpeg)."""
-        body = self._make_section(parent, "Configuração da batalha", _IC_BATALHA)
+        parent = self._make_surface(parent)
+        body = self._make_section(parent, "Configuração da batalha", _IC_BATALHA, compact=True)
 
         row_theme = ttk.Frame(body)
         row_theme.pack(fill=tk.X, pady=(0, _PX_NEAR))
@@ -1373,7 +1214,8 @@ class CortesApp(tk.Tk):
 
     def _build_tab_historia(self, parent: ttk.Frame, *, sec: str, base: dict) -> None:
         """Aba História — texto → cenas (Groq) → TTS + ComfyUI → vídeo final."""
-        body = self._make_section(parent, "História narrada em vídeo", _IC_HISTORIA)
+        parent = self._make_surface(parent)
+        body = self._make_section(parent, "História narrada em vídeo", _IC_HISTORIA, compact=True)
 
         ttk.Label(
             body,
@@ -1451,7 +1293,8 @@ class CortesApp(tk.Tk):
 
     def _build_tab_tts(self, parent: ttk.Frame, *, sec: str, base: dict) -> None:
         """Aba Text-to-Speech — texto → MP3 (local / Gemini / Edge)."""
-        body = self._make_section(parent, "Locução (TTS)", _IC_SPEAKER)
+        parent = self._make_surface(parent)
+        body = self._make_section(parent, "Locução (TTS)", _IC_SPEAKER, compact=True)
 
         ttk.Label(
             body,
@@ -1618,12 +1461,8 @@ class CortesApp(tk.Tk):
     def _apply_text_widget_theme(self) -> None:
         bg, fg = self._text_bg, self._text_fg
         log_fg = getattr(self, "_log_fg", fg)
-        if self._is_dark_theme:
-            sel_bg, sel_fg = "#0e7490", "#ecfeff"
-            hl_bg, hl_focus = "#334155", "#22d3ee"
-        else:
-            sel_bg, sel_fg = "#b6d7ff", "#0f172a"
-            hl_bg, hl_focus = "#d0d7de", "#0891b2"
+        sel_bg, sel_fg = MOSS_DK, "#FFFFFF"
+        hl_bg, hl_focus = EDGE, MOSS_HI
         kw_urls = dict(
             background=bg,
             foreground=fg,
@@ -1633,7 +1472,9 @@ class CortesApp(tk.Tk):
         )
         self._txt_urls.configure(
             **kw_urls,
-            highlightthickness=0,
+            highlightthickness=1,
+            highlightbackground=EDGE,
+            highlightcolor=MOSS,
         )
         self._log.configure(
             background=bg,
@@ -1644,7 +1485,7 @@ class CortesApp(tk.Tk):
             highlightbackground=hl_bg,
             highlightcolor=hl_focus,
         )
-        self._log.tag_configure("error", foreground="#f85149")
+        self._log.tag_configure("error", foreground="#E06A5C")
         if getattr(self, "_urls_ph_visible", False):
             self._txt_urls.configure(foreground=self._hint_fg)
         if hasattr(self, "_txt_tts"):
@@ -2078,10 +1919,14 @@ class CortesApp(tk.Tk):
             dub_to = None
             voice = None
 
+        melhorias = self._collect_melhorias()
+        self._apply_melhorias_to_config(melhorias)
+
         payload: dict[str, object] = {
             "job_type": "cortes",
             "local_paths": locals_,
             "urls": urls,
+            "melhorias": melhorias,
             "pipeline": {
                 "target_language": self._lang.get(),
                 "posicao": self._position.get(),
@@ -2273,6 +2118,81 @@ class CortesApp(tk.Tk):
             self._log_q.put(("__DONE__", results, had_error))
             self._log_q.put(None)
 
+    def _collect_melhorias(self) -> dict[str, object]:
+        backend = (self._transcribe_backend.get() or "local").strip().lower()
+        if backend not in ("local", "groq"):
+            backend = "local"
+        return {
+            "TRANSCRIBE_BACKEND": backend,
+            "SUBTITLE_KARAOKE": bool(self._karaoke.get()),
+            "VISUAL_GRADE": bool(self._visual_grade.get()),
+            "VISUAL_PROGRESS_BAR": bool(self._visual_progress.get()),
+            "VISUAL_WATERMARK_TEXT": (self._visual_watermark.get() or "").strip(),
+            "LOCAL_TTS_PREFERRED": bool(self._prefer_local_tts.get()),
+            "SMART_CROP_ENABLED": bool(self._smart_crop.get()),
+            "USE_GPU_CLIP_ENCODE": bool(self._use_gpu_encode.get()),
+            # Split continua desligado na GUI (renderer 6B.4 adiado).
+            "SMART_CROP_SPLIT_ENABLED": False,
+        }
+
+    @staticmethod
+    def _apply_melhorias_to_config(melhorias: dict[str, object]) -> None:
+        """Aplica toggles da GUI nos flags de `app.core.config` (import-time)."""
+        _cfg.TRANSCRIBE_BACKEND = str(melhorias.get("TRANSCRIBE_BACKEND") or "local")
+        _cfg.SUBTITLE_KARAOKE = bool(melhorias.get("SUBTITLE_KARAOKE"))
+        _cfg.VISUAL_GRADE = bool(melhorias.get("VISUAL_GRADE"))
+        _cfg.VISUAL_PROGRESS_BAR = bool(melhorias.get("VISUAL_PROGRESS_BAR"))
+        _cfg.VISUAL_WATERMARK_TEXT = str(melhorias.get("VISUAL_WATERMARK_TEXT") or "")
+        _cfg.LOCAL_TTS_PREFERRED = bool(melhorias.get("LOCAL_TTS_PREFERRED"))
+        _cfg.SMART_CROP_ENABLED = bool(melhorias.get("SMART_CROP_ENABLED"))
+        _cfg.USE_GPU_CLIP_ENCODE = bool(melhorias.get("USE_GPU_CLIP_ENCODE"))
+        _cfg.SMART_CROP_SPLIT_ENABLED = bool(melhorias.get("SMART_CROP_SPLIT_ENABLED", False))
+
+    def _limpar_temp(self) -> None:
+        """Apaga arquivos de temp/ com mais de 2 dias (nunca toca em resultados/)."""
+        if self._pipeline_running:
+            messagebox.showinfo(
+                "Limpar temp",
+                "Aguarde o processamento terminar antes de limpar temp/.",
+                parent=self,
+            )
+            return
+        temp = Path(TEMP_DIR)
+        if not temp.is_dir():
+            messagebox.showinfo("Limpar temp", f"Pasta não encontrada: {temp}", parent=self)
+            return
+        script = _ROOT / "limpar_temp.sh"
+        try:
+            if script.is_file():
+                proc = subprocess.run(
+                    ["bash", str(script)],
+                    cwd=str(_ROOT),
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                out = (proc.stdout or proc.stderr or "").strip() or "temp/ limpo."
+            else:
+                import time
+
+                cutoff = time.time() - 2 * 86400
+                n_files = 0
+                for p in temp.rglob("*"):
+                    if p.is_file() and p.stat().st_mtime < cutoff:
+                        p.unlink(missing_ok=True)
+                        n_files += 1
+                for p in sorted((x for x in temp.rglob("*") if x.is_dir()), reverse=True):
+                    try:
+                        p.rmdir()
+                    except OSError:
+                        pass
+                out = f"temp/ limpo ({n_files} arquivo(s) antigos)."
+        except Exception as e:
+            messagebox.showerror("Limpar temp", f"Falha ao limpar temp/:\n{e}", parent=self)
+            return
+        self._append_log(f"[Melhorias] {out}\n")
+        messagebox.showinfo("Limpar temp", out, parent=self)
+
     def _run_cortes_job_payload(
         self,
         payload: dict[str, object],
@@ -2282,6 +2202,17 @@ class CortesApp(tk.Tk):
         urls = list(payload.get("urls") or [])
         pipeline_raw = payload.get("pipeline")
         kwargs = dict(pipeline_raw) if isinstance(pipeline_raw, dict) else {}
+        melhorias_raw = payload.get("melhorias")
+        if isinstance(melhorias_raw, dict):
+            self._apply_melhorias_to_config(melhorias_raw)
+            _pipeline_log_line(
+                "Melhorias ativas: "
+                f"transcribe={_cfg.TRANSCRIBE_BACKEND}, karaoke={_cfg.SUBTITLE_KARAOKE}, "
+                f"grade={_cfg.VISUAL_GRADE}, barra={_cfg.VISUAL_PROGRESS_BAR}, "
+                f"crop={_cfg.SMART_CROP_ENABLED}, gpu={_cfg.USE_GPU_CLIP_ENCODE}, "
+                f"kokoro_dub={_cfg.LOCAL_TTS_PREFERRED}, "
+                f"watermark={_cfg.VISUAL_WATERMARK_TEXT!r}."
+            )
 
         videos: list[str] = list(locals_)
         source_by_path: dict[str, VideoSourceAttribution] = {}
@@ -2315,8 +2246,10 @@ class CortesApp(tk.Tk):
                     source_by_path[str(Path(path).resolve())] = result.attribution
             _pipeline_log_line("Todos os downloads terminaram. A iniciar o pipeline de cortes.")
 
+        backend = (_cfg.TRANSCRIBE_BACKEND or "local").strip().lower()
+        tr_label = "local (faster-whisper GPU)" if backend == "local" else "Groq Whisper"
         _pipeline_log_line(
-            "Transcrição (Groq Whisper), momentos virais, legendas no vídeo e textos para TikTok — "
+            f"Transcrição ({tr_label}), momentos virais, legendas no vídeo e textos para TikTok — "
             "pode demorar vários minutos."
         )
         pipeline_kw = dict(kwargs)
