@@ -63,6 +63,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 2B.4 (override Arial → TIKTOK_SUBTITLE_FONT) — próxima: 2B.5 — testes: OK
 2026-07-13 — última: 2B.5 (visual Montserrat OK) — próxima: 2C.1 — testes: OK
 2026-07-13 — última: 2C.1 (SUBTITLE_KARAOKE config) — próxima: 2C.2 — testes: OK
+2026-07-13 — última: 2C.2 (write_tiktok_ass_karaoke_from_srt) — próxima: 2C.3 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -303,7 +304,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   SUBTITLE_KARAOKE_HIGHLIGHT: str = os.getenv("SUBTITLE_KARAOKE_HIGHLIGHT", "#FFE000").strip()
   ```
 
-- [ ] **2C.2** — Em `app/subtitle/ass_builder.py`, adicione esta função nova **no fim do arquivo** (não apague a existente):
+- [x] **2C.2** — Em `app/subtitle/ass_builder.py`, adicione esta função nova **no fim do arquivo** (não apague a existente):
   ```python
   def _hex_to_ass(hex_color: str) -> str:
       h = (hex_color or "#FFFFFF").lstrip("#")
