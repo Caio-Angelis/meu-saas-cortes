@@ -81,6 +81,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 5.1 — próxima: 5.2 — testes: OK
 2026-07-13 — última: 5.2 — próxima: 5.3 — testes: OK
 2026-07-13 — última: 5.3 — próxima: 5.4 — testes: OK
+2026-07-13 — última: 5.4 — próxima: 6A.1 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -665,7 +666,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
       y = int(round(cy_scaled - out_h / 2 - out_h * 0.08))
   ```
 
-- [ ] **5.4 — Testar:** gere um clipe de uma pessoa falando e confira que (a) o enquadramento não "pula", e (b) o rosto não fica colado no centro, mas um pouco acima. `pytest`.
+- [x] **5.4 — Testar:** gere um clipe de uma pessoa falando e confira que (a) o enquadramento não "pula", e (b) o rosto não fica colado no centro, mas um pouco acima. `pytest`.
 
 ---
 
