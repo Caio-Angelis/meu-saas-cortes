@@ -51,6 +51,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 0.2 (baseline 158 passed) — próxima: 1.1 — testes: OK
 2026-07-13 — última: 1.1 (faster-whisper 1.2.1) — próxima: 1.2 — testes: OK
 2026-07-13 — última: 1.2 (TRANSCRIBE_BACKEND config) — próxima: 1.3 — testes: OK
+2026-07-13 — última: 1.3 (local_whisper.py) — próxima: 1.4 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -124,7 +125,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   LOCAL_WHISPER_COMPUTE: str = os.getenv("LOCAL_WHISPER_COMPUTE", "float16").strip()
   ```
 
-- [ ] **1.3 — Criar o módulo `app/ai_integrations/local_whisper.py`** com este conteúdo exato:
+- [x] **1.3 — Criar o módulo `app/ai_integrations/local_whisper.py`** com este conteúdo exato:
   ```python
   """Transcrição local via faster-whisper (CTranslate2) na GPU."""
   from __future__ import annotations
