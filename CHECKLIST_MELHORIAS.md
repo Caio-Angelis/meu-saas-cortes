@@ -92,6 +92,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-14 — última: 6B.3 — próxima: 6B.4 — testes: OK
 2026-07-14 — última: 6B.4/6B.5 (ADIADO, SMART_CROP_SPLIT_ENABLED=0) — próxima: 7.1 — testes: OK
 2026-07-14 — última: 7.1 — próxima: 7.2 — testes: OK
+2026-07-14 — última: onda paralela 7.2+8.1-8.2+9.1-9.3+10.1-10.3+11.2+11.3 — próxima: 7.3 (visual) / 11.1 / 8.3 / 9.4 / 10.4 / 12.1 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -903,7 +904,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   VISUAL_WATERMARK_TEXT: str = os.getenv("VISUAL_WATERMARK_TEXT", "").strip()  # ex.: "@seuperfil"
   ```
 
-- [ ] **7.2 — Aplicar grade + barra + marca.** Em `subtitle_burner.py`, na função `cut_and_burn_subtitles`, LOCALIZE:
+- [x] **7.2 — Aplicar grade + barra + marca.** Em `subtitle_burner.py`, na função `cut_and_burn_subtitles`, LOCALIZE:
   ```python
       vf = f"{vf_cut},{vf_overlay}"
   ```
@@ -935,7 +936,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 **Objetivo:** hoje só os primeiros ~10.000 caracteres da transcrição vão para a IA (em vídeo longo, só o começo é analisado). Aumentar a cobertura.
 **Arquivo:** `app/ai_integrations/viral_analyzer.py`.
 
-- [ ] **8.1 — Aumentar o teto (ganho imediato, risco baixo).** LOCALIZE:
+- [x] **8.1 — Aumentar o teto (ganho imediato, risco baixo).** LOCALIZE:
   ```python
   _MAX_TRANSCRIPT_CHARS = 10_000
   ```
@@ -945,7 +946,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   ```
   **Cuidado:** não exagere; muito acima disso o modelo Groq pode recusar por prompt grande. 24k é um meio-termo seguro.
 
-- [ ] **8.2 — Amostrar o vídeo todo em vez de só o começo.** Em `_build_transcript_text`, LOCALIZE:
+- [x] **8.2 — Amostrar o vídeo todo em vez de só o começo.** Em `_build_transcript_text`, LOCALIZE:
   ```python
       linhas = []
       tamanho_atual = 0
@@ -982,7 +983,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 **Objetivo:** dublar usando a voz local na GPU (rápido, offline) em vez de sempre a nuvem (Edge). E corrigir 2 bugs.
 **Arquivo:** `app/video_processing/tts_dubber.py`.
 
-- [ ] **9.1 — Corrigir o retry de timeout do Edge (bug).** LOCALIZE em `_edge_tts_save`:
+- [x] **9.1 — Corrigir o retry de timeout do Edge (bug).** LOCALIZE em `_edge_tts_save`:
   ```python
           except asyncio.TimeoutError as e:
               raise RuntimeError(
@@ -1003,7 +1004,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
               continue
   ```
 
-- [ ] **9.2 — Rotear a síntese por Kokoro quando disponível.** Em `tts_dubber.py`, LOCALIZE a função `_run_edge_tts_parallel` (a que sintetiza os trechos). Antes dela, adicione:
+- [x] **9.2 — Rotear a síntese por Kokoro quando disponível.** Em `tts_dubber.py`, LOCALIZE a função `_run_edge_tts_parallel` (a que sintetiza os trechos). Antes dela, adicione:
   ```python
   def _synthesize_jobs(jobs: list[tuple[str, Path]], voice: str) -> None:
       """Sintetiza cada (texto, arquivo). Usa Kokoro local (GPU) se der; senão Edge."""
@@ -1019,7 +1020,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
       _run_edge_tts_parallel(jobs, voice)
   ```
 
-- [ ] **9.3 — Usar o novo roteador.** Em `build_dub_audio`, LOCALIZE a chamada:
+- [x] **9.3 — Usar o novo roteador.** Em `build_dub_audio`, LOCALIZE a chamada:
   ```python
           _run_edge_tts_parallel(tts_jobs, voice)
   ```
@@ -1038,15 +1039,15 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 **Objetivo:** baixar em várias conexões.
 **Arquivo:** `app/download/ytdlp_download.py`.
 
-- [ ] **10.1 — Achar onde os argumentos de download são montados.** Abra `app/download/ytdlp_download.py` e procure a lista de argumentos passada ao yt-dlp que inclui `--newline` (função de download). 
+- [x] **10.1 — Achar onde os argumentos de download são montados.** Abra `app/download/ytdlp_download.py` e procure a lista de argumentos passada ao yt-dlp que inclui `--newline` (função de download). 
 
-- [ ] **10.2 — Adicionar concorrência de fragmentos.** Nessa mesma lista de argumentos, adicione os itens:
+- [x] **10.2 — Adicionar concorrência de fragmentos.** Nessa mesma lista de argumentos, adicione os itens:
   ```python
       "--concurrent-fragments", os.getenv("YTDLP_CONCURRENT_FRAGMENTS", "4"),
   ```
   (coloque perto de onde estão `--newline` / formato). Garanta que `import os` já existe no arquivo (existe).
 
-- [ ] **10.3 — Documentar no `.env.example`:**
+- [x] **10.3 — Documentar no `.env.example`:**
   ```
   # Download: nº de fragmentos em paralelo por vídeo (mais rápido em DASH/HLS)
   # YTDLP_CONCURRENT_FRAGMENTS=4
@@ -1068,7 +1069,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   ```
   Teste um clipe e ouça — o volume deve ficar parelho. Se preferir sem, reverta.
 
-- [ ] **11.2 — Limpeza automática de `temp/`.** A pasta `temp/` acumula gigabytes. Crie um script `limpar_temp.sh` na raiz:
+- [x] **11.2 — Limpeza automática de `temp/`.** A pasta `temp/` acumula gigabytes. Crie um script `limpar_temp.sh` na raiz:
   ```bash
   #!/usr/bin/env bash
   # Apaga arquivos de temp/ com mais de 2 dias. NÃO toca em resultados/.
@@ -1078,7 +1079,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   ```
   Rode `chmod +x limpar_temp.sh`. Use manualmente quando quiser. **Não** apague `resultados/`.
 
-- [ ] **11.3 — SQLite WAL (web).** Só se você usa a interface web. Em `app/web/store.py`, na função que abre a conexão (`_connect`), logo após criar a conexão, adicione:
+- [x] **11.3 — SQLite WAL (web).** Só se você usa a interface web. Em `app/web/store.py`, na função que abre a conexão (`_connect`), logo após criar a conexão, adicione:
   ```python
       conn.execute("PRAGMA journal_mode=WAL")
   ```
