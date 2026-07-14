@@ -21,7 +21,7 @@ from app.core.config import (
     gpu_clip_encoder_ffmpeg_args,
 )
 from app.core.subprocess_utils import run_cancelable
-from app.subtitle.ass_builder import write_tiktok_ass_from_srt
+from app.subtitle.ass_builder import write_tiktok_ass_from_srt, write_tiktok_ass_karaoke_from_srt
 from app.video_processing.focal_crop import compute_crop_plan
 
 # Gancho visual: visível só enquanto t < este valor (some exatamente em t = 3s).

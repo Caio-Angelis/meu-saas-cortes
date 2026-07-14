@@ -64,6 +64,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 2B.5 (visual Montserrat OK) — próxima: 2C.1 — testes: OK
 2026-07-13 — última: 2C.1 (SUBTITLE_KARAOKE config) — próxima: 2C.2 — testes: OK
 2026-07-13 — última: 2C.2 (write_tiktok_ass_karaoke_from_srt) — próxima: 2C.3 — testes: OK
+2026-07-13 — última: 2C.3 (import karaoke no subtitle_burner) — próxima: 2C.4 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -384,7 +385,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
       return ass_path
   ```
 
-- [ ] **2C.3** — Em `app/video_processing/subtitle_burner.py`, no topo, LOCALIZE o import:
+- [x] **2C.3** — Em `app/video_processing/subtitle_burner.py`, no topo, LOCALIZE o import:
   ```python
   from app.subtitle.ass_builder import write_tiktok_ass_from_srt
   ```
