@@ -72,6 +72,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 3.2 — próxima: 3.3 — testes: OK
 2026-07-13 — última: 3.3 — próxima: 3.4 — testes: N (config .env local)
 2026-07-13 — última: 3.4 — próxima: 4A.1 — testes: OK
+2026-07-13 — última: 4A.1 — próxima: 4A.2 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -553,7 +554,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 
 ### 4A — Batalha
 
-- [ ] **4A.1** — Abra `app/pipelines/batalha/batalha_ffmpeg.py`. No topo do arquivo, junto dos outros imports de `app.core.config`, adicione (se ainda não houver):
+- [x] **4A.1** — Abra `app/pipelines/batalha/batalha_ffmpeg.py`. No topo do arquivo, junto dos outros imports de `app.core.config`, adicione (se ainda não houver):
   ```python
   from app.core.config import gpu_clip_encoder_ffmpeg_args
   ```

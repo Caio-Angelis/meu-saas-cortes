@@ -13,7 +13,7 @@ from typing import Any
 from app.pipelines.batalha.batalha_frames import BatalhaSimulationBase, FPS, iter_simulation_frames
 from app.pipelines.batalha.batalha_pipeline import BATALHA_VIDEO_HEIGHT, BATALHA_VIDEO_WIDTH
 from app.core.cancel import is_cancelled, raise_if_cancelled
-from app.core.config import FFMPEG_PATH
+from app.core.config import FFMPEG_PATH, gpu_clip_encoder_ffmpeg_args
 from app.gui.gui_export import ffprobe_duration_seconds
 from app.core.subprocess_utils import run_cancelable
 
