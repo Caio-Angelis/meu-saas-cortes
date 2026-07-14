@@ -975,7 +975,8 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
       return "\n".join(amostra)
   ```
 
-- [ ] **8.3 — Testar:** rode com um vídeo LONGO (se tiver) e confira que os momentos escolhidos (no log/manifest em `resultados/*.json`) têm timestamps espalhados, não só no começo. `pytest`.
+- [x] **8.3 — Testar:** rode com um vídeo LONGO (se tiver) e confira que os momentos escolhidos (no log/manifest em `resultados/*.json`) têm timestamps espalhados, não só no começo. `pytest`.
+  > Verificado: amostragem uniforme de `_build_transcript_text` (sintético 0–3600s, terços iguais). Manifesto antigo `ytdl_514bda5a94f24646` (~2151s) era cache hit de moments (pré-8.2) — não prova E2E LLM pós-8.2. pytest OK.
 
 ---
 
