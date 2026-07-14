@@ -89,6 +89,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-14 — última: 6A.5 — próxima: 6B.1 (opcional) ou 7.1 — testes: OK
 2026-07-14 — última: 6B.1 — próxima: 6B.2 — testes: OK
 2026-07-14 — última: 6B.2 — próxima: 6B.3 — testes: OK
+2026-07-14 — última: 6B.3 — próxima: 6B.4 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -832,7 +833,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
       )
   ```
 
-- [ ] **6B.3 — Gerar um plano "split".** Em `compute_crop_plan`, LOCALIZE o ponto em que `max_faces >= 2` (logo antes de chamar `_speaker_timeline_crop_segments`). Antes disso, insira:
+- [x] **6B.3 — Gerar um plano "split".** Em `compute_crop_plan`, LOCALIZE o ponto em que `max_faces >= 2` (logo antes de chamar `_speaker_timeline_crop_segments`). Antes disso, insira:
   ```python
               from app.core.config import SMART_CROP_SPLIT_ENABLED
               if SMART_CROP_SPLIT_ENABLED and max_faces >= 2 and use_clip:

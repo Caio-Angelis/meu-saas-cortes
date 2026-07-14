@@ -890,6 +890,18 @@ def compute_crop_plan(
                     return None
                 return {"mode": "static", "x": static[0], "y": static[1]}
 
+            from app.core.config import SMART_CROP_SPLIT_ENABLED
+            if SMART_CROP_SPLIT_ENABLED and max_faces >= 2 and use_clip:
+                centers = _two_people_centers(
+                    cap, fd, out_w, out_h, clip_start=float(clip_start), clip_end=float(clip_end)
+                )
+                if centers is not None:
+                    (lx, _ly), (rx, _ry) = centers
+                    src_w2 = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 0
+                    # Se os dois estão longe (> 35% da largura), usa faixas.
+                    if src_w2 > 0 and abs(rx - lx) > 0.35 * src_w2:
+                        return {"mode": "split", "left": centers[0], "right": centers[1]}
+
             segs = _speaker_timeline_crop_segments(
                 cap,
                 fd,
