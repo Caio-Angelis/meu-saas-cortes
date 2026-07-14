@@ -54,6 +54,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 1.3 (local_whisper.py) — próxima: 1.4 — testes: OK
 2026-07-13 — última: 1.4 (transcriber local backend) — próxima: 1.5 — testes: OK
 2026-07-13 — última: 1.5 (.env.example TRANSCRIBE_BACKEND) — próxima: 1.6 — testes: OK
+2026-07-13 — última: 1.6 — próxima: 2A.1 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -215,7 +216,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   # LOCAL_WHISPER_COMPUTE=float16
   ```
 
-- [ ] **1.6 — Testar.** Rode o pipeline com um vídeo curto (10–30 s) que tenha fala:
+- [x] **1.6 — Testar.** Rode o pipeline com um vídeo curto (10–30 s) que tenha fala:
   ```bash
   .venv/bin/python main.py CAMINHO/DO/video_curto.mp4
   ```
