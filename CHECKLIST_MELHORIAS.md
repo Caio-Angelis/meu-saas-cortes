@@ -90,6 +90,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-14 — última: 6B.1 — próxima: 6B.2 — testes: OK
 2026-07-14 — última: 6B.2 — próxima: 6B.3 — testes: OK
 2026-07-14 — última: 6B.3 — próxima: 6B.4 — testes: OK
+2026-07-14 — última: 6B.4/6B.5 (ADIADO, SMART_CROP_SPLIT_ENABLED=0) — próxima: 7.1 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -848,7 +849,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
                           return {"mode": "split", "left": centers[0], "right": centers[1]}
   ```
 
-- [ ] **6B.4 — Renderizar o split.** Este é o passo mais delicado, porque o `split` precisa de `-filter_complex` (não cabe no `-vf` simples). Em `app/video_processing/subtitle_burner.py`, o encode usa `-vf`. Para o modo split, faça o seguinte **na função `cut_and_burn_subtitles`**:
+- [x] **6B.4 — Renderizar o split. (ADIADO — flag off; renderer não implementado)** Este é o passo mais delicado, porque o `split` precisa de `-filter_complex` (não cabe no `-vf` simples). Em `app/video_processing/subtitle_burner.py`, o encode usa `-vf`. Para o modo split, faça o seguinte **na função `cut_and_burn_subtitles`**:
 
   a) O plano de crop é calculado dentro de `_prepare_scale_crop_overlay_vf`. Precisamos saber se veio "split". A forma mais simples: em `_prepare_scale_crop_overlay_vf`, quando o `plan["mode"] == "split"`, monte um filtergraph de faixas e RETORNE ele. LOCALIZE, dentro dessa função, o bloco:
   ```python
@@ -883,7 +884,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 
   b) Como o split usa `-filter_complex` e um label de saída, e o resto (legenda/hook/cta) precisa vir depois, esta parte exige que a chamada FFmpeg troque `-vf X` por `-filter_complex "...;[vsplit]subtitles=...[vout]" -map "[vout]"`. **Se isso for complexo demais para você implementar com segurança, PARE a 6B aqui e deixe `SMART_CROP_SPLIT_ENABLED=0` no `.env`.** A 6A sozinha já resolve a maior parte do problema. Marque este item como "adiado" e siga para a Fase 7.
 
-- [ ] **6B.5 — Testar (se implementou):** clipe com 2 pessoas afastadas deve sair com tela dividida (uma em cima, outra embaixo), cada rosto enquadrado. Se sair errado, ponha `SMART_CROP_SPLIT_ENABLED=0`. `pytest`.
+- [x] **6B.5 — Testar (se implementou): (ADIADO)** clipe com 2 pessoas afastadas deve sair com tela dividida (uma em cima, outra embaixo), cada rosto enquadrado. Se sair errado, ponha `SMART_CROP_SPLIT_ENABLED=0`. `pytest`.
 
 ---
 
