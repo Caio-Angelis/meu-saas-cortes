@@ -56,6 +56,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 1.5 (.env.example TRANSCRIBE_BACKEND) — próxima: 1.6 — testes: OK
 2026-07-13 — última: 1.6 — próxima: 2A.1 — testes: OK
 2026-07-13 — última: 2A.1 (ASS bold+outline) — próxima: 2A.2 — testes: OK
+2026-07-13 — última: 2A.2 (visual outline/bold OK) — próxima: 2B.1 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -250,7 +251,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   ```
   **O que isso faz:** `1` (negrito), `1` (BorderStyle = contorno em vez de caixa), `4` (grossura do contorno), `1` (sombra). O texto passa a ter borda preta grossa — o visual moderno.
 
-- [ ] **2A.2 — Testar:** gere um clipe (como em 1.6) e confira visualmente que a legenda tem contorno preto e está em negrito, sem a caixa retangular. Rode `pytest`.
+- [x] **2A.2 — Testar:** gere um clipe (como em 1.6) e confira visualmente que a legenda tem contorno preto e está em negrito, sem a caixa retangular. Rode `pytest`.
 
 ### 2B — Fonte bold empacotada
 
