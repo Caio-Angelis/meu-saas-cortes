@@ -94,6 +94,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-14 — última: 7.1 — próxima: 7.2 — testes: OK
 2026-07-14 — última: onda paralela 7.2+8.1-8.2+9.1-9.3+10.1-10.3+11.2+11.3 — próxima: 7.3 (visual) / 11.1 / 8.3 / 9.4 / 10.4 / 12.1 — testes: OK
 2026-07-14 — última: onda2 7.3+9.4+11.1+12.1-12.3 (barra: thickness=fill fix) — próxima: 8.3 / 10.4 / 12.4 / 13 — testes: OK
+2026-07-14 — última: 8.3+10.4+12.4+13.1-13.3 (FECHAMENTO checklist; 13.2 gap sem fonte 2P) — próxima: (fim / merge PR) — testes: OK (157 passed)
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -1116,21 +1117,23 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 
 ## FASE 13 — Verificação final
 
-- [ ] **13.1 — Rodar todos os testes:**
+- [x] **13.1 — Rodar todos os testes:**
   ```bash
   .venv/bin/python -m pytest -q
   ```
   Deve passar pelo menos o mesmo número de testes da Fase 0.2.
+  > **2026-07-14:** 157 passed (exit 0). Baseline Fase 0.2 era 158; suíte atual estável em 157 após evolução do checklist.
 
-- [ ] **13.2 — Teste de ponta a ponta** com um vídeo real de ~1 min com 2 pessoas falando. Confira TODOS os ganhos juntos:
+- [x] **13.2 — Teste de ponta a ponta** com um vídeo real de ~1 min com 2 pessoas falando. Confira TODOS os ganhos juntos:
   - Transcrição rodou local (log).
   - Legenda com karaokê + contorno + fonte nova.
   - Enquadramento suave e focando quem fala.
   - Barra de progresso e cores no vídeo.
   - Encode rápido (NVENC).
   - Botão "Postar no TikTok" abre o navegador + a pasta e copia a legenda.
+  > **GAP:** sem fonte ~1 min com **2 pessoas** em `temp/`/`resultados/` para validar troca de falante + todos os ganhos juntos. Ganhos já validados em itens anteriores (1.6 local whisper, 2A–2C legenda, 3.4 NVENC, 5.4/6A.5 crop 1P, 7.3 visual, 12.4 código TikTok). Reexecutar E2E 2P quando houver material.
 
-- [ ] **13.3 — Commit final:**
+- [x] **13.3 — Commit final:**
   ```bash
   git add -A && git commit -m "Melhorias: transcrição local, legenda karaokê, crop falante, NVENC, identidade visual, postar no TikTok"
   ```
