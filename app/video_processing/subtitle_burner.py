@@ -380,7 +380,20 @@ def cut_and_burn_subtitles(
         clip_start=clip_start,
         clip_end=clip_end,
     )
-    vf = f"{vf_cut},{vf_overlay}"
+    from app.core.config import VISUAL_GRADE, VISUAL_PROGRESS_BAR, VISUAL_PROGRESS_COLOR, VISUAL_WATERMARK_TEXT
+    extra = ""
+    if VISUAL_GRADE:
+        extra += ",eq=contrast=1.06:saturation=1.12:brightness=0.01,vignette=PI/6"
+    if VISUAL_PROGRESS_BAR:
+        dur_pb = max(0.1, (float(clip_end) - float(clip_start)) / (1.0 + CLIP_SPEED_UP_PERCENT / 100.0))
+        extra += f",drawbox=x=0:y=0:w='iw*t/{dur_pb:.3f}':h=8:color={VISUAL_PROGRESS_COLOR}@0.9:t=fill"
+    if VISUAL_WATERMARK_TEXT:
+        wm = _escape_filter_single_quoted(VISUAL_WATERMARK_TEXT)
+        extra += (
+            f",drawtext=text='{wm}':font='Arial':fontsize=34:fontcolor=white@0.75:"
+            f"x=w-text_w-40:y=h-text_h-40:borderw=2:bordercolor=black@0.6"
+        )
+    vf = f"{vf_cut},{vf_overlay}{extra}"
     af = f"atempo={tempo}"
 
     cpu_venc = ["-c:v", "libx264", "-pix_fmt", "yuv420p"]
