@@ -257,14 +257,7 @@ def encode_simulation_to_silent_mp4(
         "-i",
         "pipe:0",
         "-an",
-        "-c:v",
-        "libx264",
-        "-pix_fmt",
-        "yuv420p",
-        "-preset",
-        "veryfast",
-        "-crf",
-        str(VIDEO_CRF),
+        *gpu_clip_encoder_ffmpeg_args(),
         str(out_path),
     ]
 

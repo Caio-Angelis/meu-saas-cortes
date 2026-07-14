@@ -73,6 +73,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 3.3 — próxima: 3.4 — testes: N (config .env local)
 2026-07-13 — última: 3.4 — próxima: 4A.1 — testes: OK
 2026-07-13 — última: 4A.1 — próxima: 4A.2 — testes: OK
+2026-07-13 — última: 4A.2 — próxima: 4A.3 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -559,7 +560,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   from app.core.config import gpu_clip_encoder_ffmpeg_args
   ```
 
-- [ ] **4A.2** — LOCALIZE, dentro de `encode_simulation_to_silent_mp4`, este trecho da lista `cmd`:
+- [x] **4A.2** — LOCALIZE, dentro de `encode_simulation_to_silent_mp4`, este trecho da lista `cmd`:
   ```python
           "-an",
           "-c:v",
