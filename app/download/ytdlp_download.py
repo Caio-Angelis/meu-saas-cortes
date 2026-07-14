@@ -350,6 +350,8 @@ def download_video(url: str, dest_dir: str | Path, *, no_playlist: bool = True) 
         "mp4",
         "--write-info-json",
         "--newline",
+        "--concurrent-fragments",
+        os.getenv("YTDLP_CONCURRENT_FRAGMENTS", "4"),
         url.strip(),
     ]
 
