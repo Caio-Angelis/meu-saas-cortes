@@ -136,21 +136,37 @@ def _prepare_scale_crop_overlay_vf(
         hook_file = Path(srt_path).with_suffix(".hook.txt")
         hook_file.write_text(hook_clean.replace("\n", " ").replace("\r", " "), encoding="utf-8")
 
+    from app.core.config import SUBTITLE_KARAOKE, SUBTITLE_KARAOKE_HIGHLIGHT
     ass_path = str(Path(srt_path).with_suffix(".ass"))
-    write_tiktok_ass_from_srt(
-        srt_path,
-        ass_path,
-        play_res_x=w,
-        play_res_y=h,
-        font_name=fonte,
-        font_size=fs,
-        primary_ass=primary,
-        back_ass=back,
-        margin_l=mlr,
-        margin_r=mlr,
-        margin_v=subtitle_margin_v,
-        alignment=alignment,
-    )
+    if SUBTITLE_KARAOKE:
+        write_tiktok_ass_karaoke_from_srt(
+            srt_path,
+            ass_path,
+            play_res_x=w,
+            play_res_y=h,
+            font_name=fonte,
+            font_size=fs,
+            highlight_hex=SUBTITLE_KARAOKE_HIGHLIGHT,
+            margin_l=mlr,
+            margin_r=mlr,
+            margin_v=subtitle_margin_v,
+            alignment=alignment,
+        )
+    else:
+        write_tiktok_ass_from_srt(
+            srt_path,
+            ass_path,
+            play_res_x=w,
+            play_res_y=h,
+            font_name=fonte,
+            font_size=fs,
+            primary_ass=primary,
+            back_ass=back,
+            margin_l=mlr,
+            margin_r=mlr,
+            margin_v=subtitle_margin_v,
+            alignment=alignment,
+        )
     escaped = _escape_srt_path(ass_path)
 
     scale_crop = f"scale={w}:{h}:force_original_aspect_ratio=increase"

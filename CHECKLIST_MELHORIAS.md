@@ -65,6 +65,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 2C.1 (SUBTITLE_KARAOKE config) — próxima: 2C.2 — testes: OK
 2026-07-13 — última: 2C.2 (write_tiktok_ass_karaoke_from_srt) — próxima: 2C.3 — testes: OK
 2026-07-13 — última: 2C.3 (import karaoke no subtitle_burner) — próxima: 2C.4 — testes: OK
+2026-07-13 — última: 2C.4 (branch karaoke em _prepare_scale_crop_overlay_vf) — próxima: 2C.5 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -394,7 +395,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   from app.subtitle.ass_builder import write_tiktok_ass_from_srt, write_tiktok_ass_karaoke_from_srt
   ```
 
-- [ ] **2C.4** — Ainda em `subtitle_burner.py`, dentro de `_prepare_scale_crop_overlay_vf`, LOCALIZE o bloco que chama `write_tiktok_ass_from_srt(...)`:
+- [x] **2C.4** — Ainda em `subtitle_burner.py`, dentro de `_prepare_scale_crop_overlay_vf`, LOCALIZE o bloco que chama `write_tiktok_ass_from_srt(...)`:
   ```python
       ass_path = str(Path(srt_path).with_suffix(".ass"))
       write_tiktok_ass_from_srt(

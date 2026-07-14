@@ -17,6 +17,7 @@ def _call_prepare(tmp_path: Path, fonte: str | None):
     video.write_bytes(b"fake")
     with (
         patch("app.video_processing.subtitle_burner.SMART_CROP_ENABLED", False),
+        patch("app.core.config.SUBTITLE_KARAOKE", False),
         patch("app.video_processing.subtitle_burner.write_tiktok_ass_from_srt") as mock_ass,
     ):
         mock_ass.return_value = str(tmp_path / "clip.ass")
