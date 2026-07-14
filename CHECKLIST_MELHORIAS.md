@@ -68,6 +68,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 2C.4 (branch karaoke em _prepare_scale_crop_overlay_vf) — próxima: 2C.5 — testes: OK
 2026-07-13 — última: 2C.5 — próxima: 3.1 — testes: OK
 2026-07-13 — última: 3.1 — próxima: 3.1b — testes: N (heuristic esperado)
+2026-07-13 — última: 3.1b — próxima: 3.2 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -478,7 +479,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   ```
   **Por que é seguro:** se o NVENC falhar em algum clipe, `cut_and_burn_subtitles` já tem fallback automático para CPU (libx264).
 
-- [ ] **3.1b — Atualizar o teste que trava o comportamento ANTIGO (esperado quebrar).** A mudança 3.1 vai fazer `tests/test_pipeline_gpu_heuristic.py` falhar, porque ele testa a regra antiga ("só os últimos clipes usam GPU"). Abra `tests/test_pipeline_gpu_heuristic.py` e substitua as duas funções `test_gpu_on_but_few_clips` e `test_gpu_on_last_indices` por estas (agora TODOS os clipes usam GPU quando ligado):
+- [x] **3.1b — Atualizar o teste que trava o comportamento ANTIGO (esperado quebrar).** A mudança 3.1 vai fazer `tests/test_pipeline_gpu_heuristic.py` falhar, porque ele testa a regra antiga ("só os últimos clipes usam GPU"). Abra `tests/test_pipeline_gpu_heuristic.py` e substitua as duas funções `test_gpu_on_but_few_clips` e `test_gpu_on_last_indices` por estas (agora TODOS os clipes usam GPU quando ligado):
   ```python
   def test_gpu_on_all_clips_use_gpu(gpu_on) -> None:
       # Agora todos os clipes usam GPU quando USE_GPU_CLIP_ENCODE está ligado.
