@@ -254,7 +254,7 @@ def _clamp_crop_xy(
     out_h: int,
 ) -> tuple[int, int]:
     x = int(round(cx_scaled - out_w / 2))
-    y = int(round(cy_scaled - out_h / 2))
+    y = int(round(cy_scaled - out_h / 2 - out_h * 0.08))
     x = max(0, min(x, int(math.floor(iw)) - out_w))
     y = max(0, min(y, int(math.floor(ih)) - out_h))
     return x, y

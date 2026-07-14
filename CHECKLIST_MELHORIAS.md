@@ -80,6 +80,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 4B.3 — próxima: 5.1 — testes: OK
 2026-07-13 — última: 5.1 — próxima: 5.2 — testes: OK
 2026-07-13 — última: 5.2 — próxima: 5.3 — testes: OK
+2026-07-13 — última: 5.3 — próxima: 5.4 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -655,7 +656,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
       samples = _smooth_samples_ema(samples, alpha=0.35)
   ```
 
-- [ ] **5.3 — Headroom (rosto no terço superior).** Em `focal_crop.py`, LOCALIZE a função `_clamp_crop_xy` e, dentro dela, LOCALIZE:
+- [x] **5.3 — Headroom (rosto no terço superior).** Em `focal_crop.py`, LOCALIZE a função `_clamp_crop_xy` e, dentro dela, LOCALIZE:
   ```python
       y = int(round(cy_scaled - out_h / 2))
   ```
