@@ -417,3 +417,8 @@ VISUAL_GRADE: bool = os.getenv("VISUAL_GRADE", "1").strip().lower() in ("1","tru
 VISUAL_PROGRESS_BAR: bool = os.getenv("VISUAL_PROGRESS_BAR", "1").strip().lower() in ("1","true","yes","on")
 VISUAL_PROGRESS_COLOR: str = os.getenv("VISUAL_PROGRESS_COLOR", "yellow").strip()
 VISUAL_WATERMARK_TEXT: str = os.getenv("VISUAL_WATERMARK_TEXT", "").strip()  # ex.: "@seuperfil"
+
+# Página de upload do TikTok Studio (GUI: botão "Postar no TikTok").
+TIKTOK_UPLOAD_URL: str = os.getenv(
+    "TIKTOK_UPLOAD_URL", "https://www.tiktok.com/tiktokstudio/upload"
+).strip()

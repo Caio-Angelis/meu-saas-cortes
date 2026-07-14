@@ -31,6 +31,7 @@ import threading
 import tkinter as tk
 import tkinter.font as tkfont
 import traceback
+import webbrowser
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from tkinter import colorchooser, filedialog, messagebox, ttk
@@ -41,7 +42,13 @@ from typing import NamedTuple
 _ROOT = Path(__file__).resolve().parent
 os.chdir(_ROOT)
 
-from app.core.config import DOWNLOAD_MAX_WORKERS, EDGE_TTS_VOICE_PT, OUTPUT_DIR, TEMP_DIR
+from app.core.config import (
+    DOWNLOAD_MAX_WORKERS,
+    EDGE_TTS_VOICE_PT,
+    OUTPUT_DIR,
+    TEMP_DIR,
+    TIKTOK_UPLOAD_URL,
+)
 from app.tts.gemini_tts import gemini_tts_available
 from app.tts.local_tts import local_tts_available
 from app.tts.tts_voices import (
@@ -932,6 +939,12 @@ class CortesApp(tk.Tk):
             r_a,
             text="Copiar caminho (selecionado)",
             command=self._copy_path_selected,
+            style=sec,
+        ).pack(side=tk.LEFT, padx=(0, _PX_NEAR), pady=_PX_MICRO)
+        ttk.Button(
+            r_a,
+            text="Postar no TikTok (selecionado)",
+            command=self._post_to_tiktok_selected,
             style=sec,
         ).pack(side=tk.LEFT, padx=(0, _PX_NEAR), pady=_PX_MICRO)
         r_b = ttk.Frame(f_btns)
@@ -1910,6 +1923,38 @@ class CortesApp(tk.Tk):
         self.clipboard_clear()
         self.clipboard_append(text)
         self.update()
+
+    def _post_to_tiktok_selected(self) -> None:
+        """Prepara post no TikTok: copia legenda, abre pasta do clipe e a página de upload.
+
+        Não faz login nem publica — só deixa pronto para arrastar o vídeo e Ctrl+V.
+        """
+        mp4 = self._selected_mp4_path()
+        if not mp4:
+            messagebox.showinfo("Seleção", "Selecione uma linha na tabela de clipes.", parent=self)
+            return
+        cap = Path(mp4).with_suffix(".txt")
+        caption_copied = False
+        if cap.is_file():
+            text = cap.read_text(encoding="utf-8").strip()
+            self.clipboard_clear()
+            self.clipboard_append(text)
+            self.update()
+            caption_copied = True
+        _open_folder(Path(mp4).parent)
+        webbrowser.open(TIKTOK_UPLOAD_URL)
+        if caption_copied:
+            messagebox.showinfo(
+                "TikTok",
+                "Legenda copiada. Arraste o vídeo e cole a legenda com Ctrl+V.",
+                parent=self,
+            )
+        else:
+            messagebox.showinfo(
+                "TikTok",
+                "Pasta e upload abertos. Nenhuma legenda .txt encontrada ao lado do clipe.",
+                parent=self,
+            )
 
     def _copy_path_selected(self) -> None:
         mp4 = self._selected_mp4_path()
