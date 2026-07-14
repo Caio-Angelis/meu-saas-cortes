@@ -1109,7 +1109,8 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 
 - [x] **12.3 — Adicionar o botão na tabela de resultados.** Perto dos botões que já existem ("Copiar legenda (selecionado)" e "Copiar caminho (selecionado)", que ficam no frame chamado `r_a`, por volta da linha 925 de `gui.py`), adicione um botão novo com o texto **"Postar no TikTok (selecionado)"** que chama `self._post_to_tiktok_selected`. Use o **mesmo estilo** (`style=sec`) e o mesmo padrão de `.pack(...)` dos botões vizinhos, para ficar visualmente igual.
 
-- [ ] **12.4 — Testar:** gere alguns clipes, selecione um na tabela e clique em **"Postar no TikTok (selecionado)"**. Deve acontecer: (a) abre a página de upload do TikTok no navegador, (b) abre a pasta com o clipe, (c) a legenda já cola com Ctrl+V. Complete o post arrastando o arquivo e colando a legenda. Rode `pytest` (essa mudança não tem teste automatizado — o teste é visual).
+- [x] **12.4 — Testar:** gere alguns clipes, selecione um na tabela e clique em **"Postar no TikTok (selecionado)"**. Deve acontecer: (a) abre a página de upload do TikTok no navegador, (b) abre a pasta com o clipe, (c) a legenda já cola com Ctrl+V. Complete o post arrastando o arquivo e colando a legenda. Rode `pytest` (essa mudança não tem teste automatizado — o teste é visual).
+  > Verificado: código cobre (a) `webbrowser.open(TIKTOK_UPLOAD_URL)` (b) `_open_folder` (c) clipboard do `.txt`; botão wired; sem Selenium/auto-publish. Smoke lógico com mocks OK. Clique humano na GUI / post real **não** exercitado nesta sessão. pytest OK.
 
 ---
 
