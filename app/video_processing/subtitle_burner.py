@@ -386,7 +386,7 @@ def cut_and_burn_subtitles(
         extra += ",eq=contrast=1.06:saturation=1.12:brightness=0.01,vignette=PI/6"
     if VISUAL_PROGRESS_BAR:
         dur_pb = max(0.1, (float(clip_end) - float(clip_start)) / (1.0 + CLIP_SPEED_UP_PERCENT / 100.0))
-        extra += f",drawbox=x=0:y=0:w='iw*t/{dur_pb:.3f}':h=8:color={VISUAL_PROGRESS_COLOR}@0.9:t=fill"
+        extra += f",drawbox=x=0:y=0:w='iw*t/{dur_pb:.3f}':h=8:color={VISUAL_PROGRESS_COLOR}@0.9:thickness=fill"
     if VISUAL_WATERMARK_TEXT:
         wm = _escape_filter_single_quoted(VISUAL_WATERMARK_TEXT)
         extra += (
@@ -394,7 +394,7 @@ def cut_and_burn_subtitles(
             f"x=w-text_w-40:y=h-text_h-40:borderw=2:bordercolor=black@0.6"
         )
     vf = f"{vf_cut},{vf_overlay}{extra}"
-    af = f"atempo={tempo}"
+    af = f"atempo={tempo},loudnorm=I=-14:TP=-1.0:LRA=11"
 
     cpu_venc = ["-c:v", "libx264", "-pix_fmt", "yuv420p"]
     venc: list[str] = gpu_clip_encoder_ffmpeg_args() if use_gpu_encoder else cpu_venc
