@@ -74,6 +74,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 3.4 — próxima: 4A.1 — testes: OK
 2026-07-13 — última: 4A.1 — próxima: 4A.2 — testes: OK
 2026-07-13 — última: 4A.2 — próxima: 4A.3 — testes: OK
+2026-07-13 — última: 4A.3 — próxima: 4B.1 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -581,7 +582,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   ```
   **Cuidado:** `gpu_clip_encoder_ffmpeg_args()` já inclui `-c:v` e `-pix_fmt`. Se em algum PC não houver GPU, essa função devolve `libx264` automaticamente, então continua funcionando.
 
-- [ ] **4A.3 — Testar:** gere uma batalha pela GUI (aba Batalha) e confira que o MP4 sai correto. `pytest`.
+- [x] **4A.3 — Testar:** gere uma batalha pela GUI (aba Batalha) e confira que o MP4 sai correto. `pytest`.
 
 ### 4B — História
 
