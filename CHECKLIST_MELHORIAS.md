@@ -79,6 +79,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 4B.2 — próxima: 4B.3 — testes: OK
 2026-07-13 — última: 4B.3 — próxima: 5.1 — testes: OK
 2026-07-13 — última: 5.1 — próxima: 5.2 — testes: OK
+2026-07-13 — última: 5.2 — próxima: 5.3 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -643,7 +644,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
       return out
   ```
 
-- [ ] **5.2 — Aplicar a suavização.** Dentro de `_speaker_timeline_crop_segments`, LOCALIZE:
+- [x] **5.2 — Aplicar a suavização.** Dentro de `_speaker_timeline_crop_segments`, LOCALIZE:
   ```python
       samples = _stabilize_speaker_changes_min_interval(
           samples, SMART_CROP_MIN_CHANGE_INTERVAL_SEC

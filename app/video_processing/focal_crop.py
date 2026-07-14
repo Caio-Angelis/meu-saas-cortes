@@ -689,6 +689,7 @@ def _speaker_timeline_crop_segments(
     samples = _stabilize_speaker_changes_min_interval(
         samples, SMART_CROP_MIN_CHANGE_INTERVAL_SEC
     )
+    samples = _smooth_samples_ema(samples, alpha=0.35)
 
     merged: list[tuple[float, float, int, int]] = []
     seg_start = samples[0][0]
