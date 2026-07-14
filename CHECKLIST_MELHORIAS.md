@@ -58,6 +58,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 2A.1 (ASS bold+outline) — próxima: 2A.2 — testes: OK
 2026-07-13 — última: 2A.2 (visual outline/bold OK) — próxima: 2B.1 — testes: OK
 2026-07-13 — última: 2B.1 (Montserrat-Bold.ttf em assets/fonts/) — próxima: 2B.2 — testes: N/A (asset only)
+2026-07-13 — última: 2B.2 (TIKTOK_SUBTITLE_FONT + FONTS_DIR) — próxima: 2B.3 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -258,7 +259,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 
 - [x] **2B.1** — Crie a pasta `assets/fonts/` e coloque nela um arquivo TTF de fonte bold (ex.: `Montserrat-Bold.ttf` ou `Anton-Regular.ttf`). Baixe uma fonte gratuita/comercialmente livre.
 
-- [ ] **2B.2** — No fim de `app/core/config.py` adicione:
+- [x] **2B.2** — No fim de `app/core/config.py` adicione:
   ```python
   # Nome interno da fonte da legenda (deve bater com o "name" do TTF em assets/fonts/)
   TIKTOK_SUBTITLE_FONT: str = os.getenv("TIKTOK_SUBTITLE_FONT", "Montserrat").strip()

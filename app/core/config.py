@@ -393,3 +393,7 @@ TRANSCRIBE_BACKEND: str = os.getenv("TRANSCRIBE_BACKEND", "local").strip().lower
 # Modelo do faster-whisper (large-v3 = melhor; medium = mais rápido/menos VRAM).
 LOCAL_WHISPER_MODEL: str = os.getenv("LOCAL_WHISPER_MODEL", "large-v3").strip()
 LOCAL_WHISPER_COMPUTE: str = os.getenv("LOCAL_WHISPER_COMPUTE", "float16").strip()
+
+# Nome interno da fonte da legenda (deve bater com o "name" do TTF em assets/fonts/)
+TIKTOK_SUBTITLE_FONT: str = os.getenv("TIKTOK_SUBTITLE_FONT", "Montserrat").strip()
+FONTS_DIR: str = str((Path(__file__).resolve().parents[2] / "assets" / "fonts"))
