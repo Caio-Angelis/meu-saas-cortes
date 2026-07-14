@@ -1055,7 +1055,8 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   # YTDLP_CONCURRENT_FRAGMENTS=4
   ```
 
-- [ ] **10.4 — Testar:** baixe um vídeo por URL pela GUI/CLI e confira que baixa normalmente (e mais rápido). `pytest`.
+- [x] **10.4 — Testar:** baixe um vídeo por URL pela GUI/CLI e confira que baixa normalmente (e mais rápido). `pytest`.
+  > Verificado: `--concurrent-fragments` (default 4) em `download_video`; download YouTube curto OK (`jNQXAC9IVRw` → `/tmp`, ~614 KiB). GUI/web usam o mesmo helper. pytest OK.
 
 ---
 
