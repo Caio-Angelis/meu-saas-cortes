@@ -48,6 +48,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 
 - (exemplo) 2026-07-10 — última: 0.2 (baseline) — próxima: 1.1 — testes: OK
 <!-- A IA adiciona novas linhas ABAIXO desta. Nunca apague linhas antigas. -->
+2026-07-13 — última: 0.2 (baseline 158 passed) — próxima: 1.1 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -89,7 +90,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   ```
   Esperado: `cuda True` e linhas `h264_nvenc`, `hevc_nvenc`. Se `cuda` for `False`, PARE — as fases 1, 5, 6 e 9 dependem da GPU.
 
-- [ ] **0.2 — Rodar os testes uma vez para ter a "linha de base":**
+- [x] **0.2 — Rodar os testes uma vez para ter a "linha de base":**
   ```bash
   .venv/bin/python -m pytest -q
   ```

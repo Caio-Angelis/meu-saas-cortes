@@ -1,6 +1,6 @@
 # AI_CONTEXT — meu_saas_cortes
 
-Documento de contexto para outra IA ou desenvolvedor entender o projeto **sem ler o código inteiro**. Última revisão: **2026-06-08**, alinhada ao código em `app/`, `main.py`, `gui.py` e `web_main.py`.
+Documento de contexto para outra IA ou desenvolvedor entender o projeto **sem ler o código inteiro**. Última revisão: **2026-07-13**, alinhada ao código em `app/`, `main.py`, `gui.py` e `web_main.py`.
 
 **Especificação de produto (fonte de verdade):** `projeto.md` — comportamento desejado, regras de negócio e fluxos; implementações novas devem seguir esse arquivo. **Otimização de eficiência (checklist validado):** `checklist.md` — passos aprovados após revisão de risco ao fluxo (env, código e itens excluídos). **Expansão (quiz):** `projeto.md` §13; backend em `app/quiz_pipeline.py` — `run_quiz_pipeline` (Etapas 1–4). **Batalha 1v1:** `app/batalha_pipeline.py` — `run_batalha_pipeline_from_payload` (Groq → imagens → TTS gancho + `script_narracao` → Pymunk → FFmpeg stdin + SFX). **História (vídeo narrado):** `app/historia_pipeline.py` — `run_historia_pipeline` (Groq cenas → TTS + ComfyUI por cena → FFmpeg loop/sync + concat → `OUTPUT_DIR/historias/historia_final_<timestamp>.mp4`). **GUI:** `gui.py` com `ttk.Notebook` — abas «Cortes Virais», «Máquina de Quizzes», «Batalha 1v1», «História» e «Text-to-Speech»; log/resultados globais; worker roteia `job_type` (`cortes` → `run_pipeline`, `quiz` → `run_quiz_pipeline`, `batalha` → `run_batalha_pipeline_from_payload`, `historia` → `run_historia_pipeline`, `tts` → `app/tts_standalone.synthesize_tts_mp3`). **Telegram:** `telegram_bot.py` — bot local (`python-telegram-bot` v21+, asyncio); só responde a `TELEGRAM_ALLOWED_USER_ID`; `/quiz` → `run_quiz_pipeline`, `/cortes` → yt-dlp + `run_pipeline`; envia cada MP4 com legenda `.txt` recomendada. Este `AI_CONTEXT.md` é mapa técnico complementar.
 
@@ -12,7 +12,7 @@ Os arquivos `README.md` e `FLUXO_DE_DADOS.md` descrevem o fluxo básico (o READM
 
 **Groq + httpx:** o projeto fixa **`groq>=1.2.0`** (SDK atual compatível com `httpx` 0.28+). Versões antigas (`groq==0.11.0`) quebram com `TypeError: ... unexpected keyword argument 'proxies'`.
 
-**Verificação após alterações:** com o venv ativo e dependências de dev instaladas (`pip install -r requirements-dev.txt`), rode **`pytest`** na raiz (config em `[tool.pytest.ini_options]` no `pyproject.toml`, `testpaths = ["tests"]`, `addopts = "-q"`). Em maio/2026 a suíte tem **~59 testes** e cobre lógica pura e integrações leves **sem** chamar Groq, FFmpeg ou yt-dlp na maior parte dos casos — ideal para checar regressões rápidas antes de um processamento completo.
+**Verificação após alterações:** com o venv ativo e dependências de dev instaladas (`pip install -r requirements-dev.txt`), rode **`pytest`** na raiz (config em `[tool.pytest.ini_options]` no `pyproject.toml`, `testpaths = ["tests"]`, `addopts = "-q"`). Em jul/2026 a suíte tem **158 testes** (baseline `CHECKLIST_MELHORIAS` item **0.2**, worktree `checklist-melhorias`) e cobre lógica pura e integrações leves **sem** chamar Groq, FFmpeg ou yt-dlp na maior parte dos casos — ideal para checar regressões rápidas antes de um processamento completo. Manter **158 passed** ao avançar o checklist.
 
 ---
 
