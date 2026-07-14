@@ -77,6 +77,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 4A.3 — próxima: 4B.1 — testes: OK
 2026-07-13 — última: 4B.1 — próxima: 4B.2 — testes: OK
 2026-07-13 — última: 4B.2 — próxima: 4B.3 — testes: OK
+2026-07-13 — última: 4B.3 — próxima: 5.1 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -613,7 +614,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
           str(output_path),
   ```
 
-- [ ] **4B.3 — Testar:** gere uma história (aba História) e confira o MP4. `pytest`.
+- [x] **4B.3 — Testar:** gere uma história (aba História) e confira o MP4. `pytest`.
 
 ---
 
