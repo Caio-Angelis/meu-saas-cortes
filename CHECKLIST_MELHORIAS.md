@@ -71,6 +71,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 3.1b — próxima: 3.2 — testes: OK
 2026-07-13 — última: 3.2 — próxima: 3.3 — testes: OK
 2026-07-13 — última: 3.3 — próxima: 3.4 — testes: N (config .env local)
+2026-07-13 — última: 3.4 — próxima: 4A.1 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -544,7 +545,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   CLIP_ENCODE_PARALLEL_GPU=4
   ```
 
-- [ ] **3.4 — Testar:** gere um vídeo com vários clipes. Confirme no log que o encode roda e que os MP4 saem certos em `resultados/`. Rode `pytest`.
+- [x] **3.4 — Testar:** gere um vídeo com vários clipes. Confirme no log que o encode roda e que os MP4 saem certos em `resultados/`. Rode `pytest`.
 
 ---
 
