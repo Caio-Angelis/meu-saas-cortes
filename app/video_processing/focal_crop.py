@@ -671,6 +671,11 @@ def _speaker_timeline_crop_segments(
         else:
             spk = 0
 
+        # Só troca de falante durante voz; no silêncio mantém o anterior.
+        if voiced is not None and not _is_voiced(t, voiced):
+            if last_speaker_i < len(faces):
+                spk = last_speaker_i
+
         cx, cy = faces[spk][0], faces[spk][1]
         last_speaker_i = spk
         last_cx_s = cx * s

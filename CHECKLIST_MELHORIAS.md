@@ -84,6 +84,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 5.4 — próxima: 6A.1 — testes: OK
 2026-07-14 — última: 6A.1 — próxima: 6A.2 — testes: OK
 2026-07-14 — última: 6A.2 — próxima: 6A.3 — testes: OK
+2026-07-14 — última: 6A.3 — próxima: 6A.4 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -760,7 +761,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   ) -> Optional[list[tuple[float, float, int, int]]]:
   ```
 
-- [ ] **6A.3 — Usar o gate.** Dentro dessa mesma função, LOCALIZE o bloco que escolhe `spk` quando há 2+ rostos. Ele termina decidindo `spk`. Logo **depois** do bloco `if len(faces) >= 2 ... else: spk = 0` e **antes** da linha `cx, cy = faces[spk][0], faces[spk][1]`, insira:
+- [x] **6A.3 — Usar o gate.** Dentro dessa mesma função, LOCALIZE o bloco que escolhe `spk` quando há 2+ rostos. Ele termina decidindo `spk`. Logo **depois** do bloco `if len(faces) >= 2 ... else: spk = 0` e **antes** da linha `cx, cy = faces[spk][0], faces[spk][1]`, insira:
   ```python
           # Só troca de falante durante voz; no silêncio mantém o anterior.
           if voiced is not None and not _is_voiced(t, voiced):
