@@ -88,6 +88,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-14 — última: 6A.4 — próxima: 6A.5 — testes: OK
 2026-07-14 — última: 6A.5 — próxima: 6B.1 (opcional) ou 7.1 — testes: OK
 2026-07-14 — última: 6B.1 — próxima: 6B.2 — testes: OK
+2026-07-14 — última: 6B.2 — próxima: 6B.3 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -802,7 +803,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   SMART_CROP_SPLIT_ENABLED: bool = os.getenv("SMART_CROP_SPLIT_ENABLED", "1").strip().lower() in ("1","true","yes","on")
   ```
 
-- [ ] **6B.2 — Detectar posições das 2 pessoas e decidir split.** Em `focal_crop.py`, adicione uma função que devolve os centros medianos de cada uma das 2 pessoas. Adicione antes de `compute_crop_plan`:
+- [x] **6B.2 — Detectar posições das 2 pessoas e decidir split.** Em `focal_crop.py`, adicione uma função que devolve os centros medianos de cada uma das 2 pessoas. Adicione antes de `compute_crop_plan`:
   ```python
   def _two_people_centers(cap, face_detector, out_w, out_h, *, clip_start, clip_end):
       """Devolve ((cxL,cyL),(cxR,cyR)) em pixels da fonte, ou None."""

@@ -795,6 +795,33 @@ def _is_voiced(t: float, voiced: list[tuple[float, float]]) -> bool:
     return False
 
 
+def _two_people_centers(cap, face_detector, out_w, out_h, *, clip_start, clip_end):
+    """Devolve ((cxL,cyL),(cxR,cyR)) em pixels da fonte, ou None."""
+    import cv2, statistics
+    vfps = float(cap.get(cv2.CAP_PROP_FPS)) or 25.0
+    dur = max(0.1, float(clip_end) - float(clip_start))
+    n = max(5, min(SMART_CROP_FRAME_SAMPLES, int(dur * 2)))
+    left_x, left_y, right_x, right_y = [], [], [], []
+    for i in range(n):
+        ts = float(clip_start) + (i + 0.5) / n * dur
+        cap.set(cv2.CAP_PROP_POS_MSEC, ts * 1000.0)
+        ok, frame = cap.read()
+        if not ok or frame is None:
+            continue
+        faces = _all_faces_sorted_by_x(frame, face_detector)
+        if len(faces) < 2:
+            continue
+        l, r = faces[0], faces[-1]
+        left_x.append(l[0]); left_y.append(l[1])
+        right_x.append(r[0]); right_y.append(r[1])
+    if len(left_x) < 3 or len(right_x) < 3:
+        return None
+    return (
+        (statistics.median(left_x), statistics.median(left_y)),
+        (statistics.median(right_x), statistics.median(right_y)),
+    )
+
+
 def compute_crop_plan(
     video_path: str,
     out_w: int | None = None,
