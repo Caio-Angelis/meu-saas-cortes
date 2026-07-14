@@ -57,6 +57,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 1.6 — próxima: 2A.1 — testes: OK
 2026-07-13 — última: 2A.1 (ASS bold+outline) — próxima: 2A.2 — testes: OK
 2026-07-13 — última: 2A.2 (visual outline/bold OK) — próxima: 2B.1 — testes: OK
+2026-07-13 — última: 2B.1 (Montserrat-Bold.ttf em assets/fonts/) — próxima: 2B.2 — testes: N/A (asset only)
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -255,7 +256,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 
 ### 2B — Fonte bold empacotada
 
-- [ ] **2B.1** — Crie a pasta `assets/fonts/` e coloque nela um arquivo TTF de fonte bold (ex.: `Montserrat-Bold.ttf` ou `Anton-Regular.ttf`). Baixe uma fonte gratuita/comercialmente livre.
+- [x] **2B.1** — Crie a pasta `assets/fonts/` e coloque nela um arquivo TTF de fonte bold (ex.: `Montserrat-Bold.ttf` ou `Anton-Regular.ttf`). Baixe uma fonte gratuita/comercialmente livre.
 
 - [ ] **2B.2** — No fim de `app/core/config.py` adicione:
   ```python
