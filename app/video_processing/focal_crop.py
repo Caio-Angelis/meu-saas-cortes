@@ -577,6 +577,7 @@ def _speaker_timeline_crop_segments(
     *,
     time_offset_sec: float = 0.0,
     clip_duration_sec: float | None = None,
+    voiced: list[tuple[float, float]] | None = None,
 ) -> Optional[list[tuple[float, float, int, int]]]:
     """
     Segmentos [t0,t1) com (crop_x, crop_y) para manter o rosto do falante no centro.

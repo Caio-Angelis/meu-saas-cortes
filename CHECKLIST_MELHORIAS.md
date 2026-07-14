@@ -83,6 +83,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 5.3 — próxima: 5.4 — testes: OK
 2026-07-13 — última: 5.4 — próxima: 6A.1 — testes: OK
 2026-07-14 — última: 6A.1 — próxima: 6A.2 — testes: OK
+2026-07-14 — última: 6A.2 — próxima: 6A.3 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -731,7 +732,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
       return False
   ```
 
-- [ ] **6A.2 — Passar os intervalos de voz para o cálculo do falante.** Em `_speaker_timeline_crop_segments`, adicione um parâmetro novo. LOCALIZE a assinatura:
+- [x] **6A.2 — Passar os intervalos de voz para o cálculo do falante.** Em `_speaker_timeline_crop_segments`, adicione um parâmetro novo. LOCALIZE a assinatura:
   ```python
   def _speaker_timeline_crop_segments(
       cap: object,
