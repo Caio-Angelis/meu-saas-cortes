@@ -59,6 +59,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 2A.2 (visual outline/bold OK) — próxima: 2B.1 — testes: OK
 2026-07-13 — última: 2B.1 (Montserrat-Bold.ttf em assets/fonts/) — próxima: 2B.2 — testes: N/A (asset only)
 2026-07-13 — última: 2B.2 (TIKTOK_SUBTITLE_FONT + FONTS_DIR) — próxima: 2B.3 — testes: OK
+2026-07-13 — última: 2B.3 (fontsdir no filtro subtitles) — próxima: 2B.4 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -266,7 +267,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   FONTS_DIR: str = str((Path(__file__).resolve().parents[2] / "assets" / "fonts"))
   ```
 
-- [ ] **2B.3** — Em `app/video_processing/subtitle_burner.py`, LOCALIZE a linha que monta o filtro de legenda (dentro de `_prepare_scale_crop_overlay_vf`):
+- [x] **2B.3** — Em `app/video_processing/subtitle_burner.py`, LOCALIZE a linha que monta o filtro de legenda (dentro de `_prepare_scale_crop_overlay_vf`):
   ```python
       vf = f"{scale_crop},subtitles='{escaped}'{hook_vf}{cta_vf}"
   ```

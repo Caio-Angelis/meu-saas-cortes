@@ -226,7 +226,9 @@ def _prepare_scale_crop_overlay_vf(
         f"enable='{cta_enable}'"
     )
 
-    vf = f"{scale_crop},subtitles='{escaped}'{hook_vf}{cta_vf}"
+    from app.core.config import FONTS_DIR
+    fonts_clause = f":fontsdir='{_escape_srt_path(FONTS_DIR)}'"
+    vf = f"{scale_crop},subtitles='{escaped}'{fonts_clause}{hook_vf}{cta_vf}"
     return vf, ass_path, hook_file, cta_file
 
 
