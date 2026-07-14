@@ -61,6 +61,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 2B.2 (TIKTOK_SUBTITLE_FONT + FONTS_DIR) — próxima: 2B.3 — testes: OK
 2026-07-13 — última: 2B.3 (fontsdir no filtro subtitles) — próxima: 2B.4 — testes: OK
 2026-07-13 — última: 2B.4 (override Arial → TIKTOK_SUBTITLE_FONT) — próxima: 2B.5 — testes: OK
+2026-07-13 — última: 2B.5 (visual Montserrat OK) — próxima: 2C.1 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -287,7 +288,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   ```
   **Cuidado:** o "name" interno do TTF precisa bater com `TIKTOK_SUBTITLE_FONT`. Se a legenda sair na fonte errada, ajuste `TIKTOK_SUBTITLE_FONT` no `.env` para o nome real da família da fonte.
 
-- [ ] **2B.5 — Testar:** gere um clipe e confira que a fonte mudou. `pytest`.
+- [x] **2B.5 — Testar:** gere um clipe e confira que a fonte mudou. `pytest`.
 
 ### 2C — Karaokê (palavras saltando)
 
