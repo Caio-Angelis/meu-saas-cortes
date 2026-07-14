@@ -93,6 +93,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-14 — última: 6B.4/6B.5 (ADIADO, SMART_CROP_SPLIT_ENABLED=0) — próxima: 7.1 — testes: OK
 2026-07-14 — última: 7.1 — próxima: 7.2 — testes: OK
 2026-07-14 — última: onda paralela 7.2+8.1-8.2+9.1-9.3+10.1-10.3+11.2+11.3 — próxima: 7.3 (visual) / 11.1 / 8.3 / 9.4 / 10.4 / 12.1 — testes: OK
+2026-07-14 — última: onda2 7.3+9.4+11.1+12.1-12.3 (barra: thickness=fill fix) — próxima: 8.3 / 10.4 / 12.4 / 13 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -927,7 +928,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   ```
   **Cuidado:** a ordem importa — `vf_overlay` já inclui a legenda; o `extra` (grade/barra/marca) vem depois. Está correto assim.
 
-- [ ] **7.3 — Testar:** gere um clipe. Deve aparecer: cores um pouco mais vivas, leve escurecimento nas bordas, uma barrinha crescendo no topo, e (se você preencher `VISUAL_WATERMARK_TEXT` no `.env`) o @ no canto. Se algo ficar feio, desligue com as flags no `.env`. `pytest`.
+- [x] **7.3 — Testar:** gere um clipe. Deve aparecer: cores um pouco mais vivas, leve escurecimento nas bordas, uma barrinha crescendo no topo, e (se você preencher `VISUAL_WATERMARK_TEXT` no `.env`) o @ no canto. Se algo ficar feio, desligue com as flags no `.env`. `pytest`.
 
 ---
 
@@ -1030,7 +1031,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   ```
   **Cuidado:** o Kokoro grava MP3; os arquivos de trabalho aqui são `raw_{i}.mp3` — compatível. Se o Kokoro falhar, cai no Edge automaticamente.
 
-- [ ] **9.4 — Testar:** gere um clipe com dublagem ligada (opção `--dub-pt` no CLI ou o toggle na GUI). Confira que a voz sai e está sincronizada. Se você não usa dublagem, pode marcar como feito sem testar. `pytest`.
+- [x] **9.4 — Testar:** gere um clipe com dublagem ligada (opção `--dub-pt` no CLI ou o toggle na GUI). Confira que a voz sai e está sincronizada. Se você não usa dublagem, pode marcar como feito sem testar. `pytest`.
 
 ---
 
@@ -1059,7 +1060,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 
 ## FASE 11 — Polimento (baixo risco)
 
-- [ ] **11.1 — Normalizar volume do áudio dos cortes.** Em `app/video_processing/subtitle_burner.py`, dentro de `cut_and_burn_subtitles`, LOCALIZE:
+- [x] **11.1 — Normalizar volume do áudio dos cortes.** Em `app/video_processing/subtitle_burner.py`, dentro de `cut_and_burn_subtitles`, LOCALIZE:
   ```python
       af = f"atempo={tempo}"
   ```
@@ -1093,9 +1094,9 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 **Arquivo:** `gui.py` (e um item pequeno em `config.py`).
 **Observação:** esta fase é **independente** das outras (só mexe na GUI); pode ser feita a qualquer momento. Reaproveite funções que já existem — não é preciso inventar muito código.
 
-- [ ] **12.1 — Config da URL de upload.** No fim de `app/core/config.py`, crie uma variável de ambiente chamada `TIKTOK_UPLOAD_URL` com valor padrão `https://www.tiktok.com/tiktokstudio/upload` (assim, se o TikTok mudar o endereço, dá pra corrigir pelo `.env` sem mexer no código). Documente essa variável no `.env.example`.
+- [x] **12.1 — Config da URL de upload.** No fim de `app/core/config.py`, crie uma variável de ambiente chamada `TIKTOK_UPLOAD_URL` com valor padrão `https://www.tiktok.com/tiktokstudio/upload` (assim, se o TikTok mudar o endereço, dá pra corrigir pelo `.env` sem mexer no código). Documente essa variável no `.env.example`.
 
-- [ ] **12.2 — Criar o método `_post_to_tiktok_selected` na classe da GUI (`CortesApp`, em `gui.py`).** Ele deve fazer, nesta ordem, **reaproveitando código que já existe no arquivo**:
+- [x] **12.2 — Criar o método `_post_to_tiktok_selected` na classe da GUI (`CortesApp`, em `gui.py`).** Ele deve fazer, nesta ordem, **reaproveitando código que já existe no arquivo**:
   1. Descobrir qual clipe está selecionado na tabela usando o método que **já existe**: `_selected_mp4_path()`. Se nada estiver selecionado, mostrar um aviso com `messagebox.showinfo(...)` (igual aos outros botões) e parar.
   2. Copiar a legenda para a área de transferência **usando a mesma lógica que já está em `_copy_caption_selected`** (ela lê o arquivo `.txt` que fica ao lado do `.mp4` e usa `self.clipboard_clear()` + `self.clipboard_append(...)`). Se não existir o `.txt`, seguir mesmo assim, só sem copiar legenda.
   3. Abrir a pasta onde está o clipe (pra facilitar arrastar) **usando a função de módulo que já existe `_open_folder(...)`** (por volta da linha 170), passando a pasta do arquivo (`Path(mp4).parent`).
@@ -1104,7 +1105,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 
   > ⚠️ **REGRA DE OURO desta fase:** este método **só abre e prepara**. Ele **NÃO** pode tentar logar, preencher formulário, ou clicar em "Publicar". É exatamente isso que mantém o risco em ZERO. Se você se pegar escrevendo automação de navegador (Selenium/Playwright), PARE — não é isso que foi pedido.
 
-- [ ] **12.3 — Adicionar o botão na tabela de resultados.** Perto dos botões que já existem ("Copiar legenda (selecionado)" e "Copiar caminho (selecionado)", que ficam no frame chamado `r_a`, por volta da linha 925 de `gui.py`), adicione um botão novo com o texto **"Postar no TikTok (selecionado)"** que chama `self._post_to_tiktok_selected`. Use o **mesmo estilo** (`style=sec`) e o mesmo padrão de `.pack(...)` dos botões vizinhos, para ficar visualmente igual.
+- [x] **12.3 — Adicionar o botão na tabela de resultados.** Perto dos botões que já existem ("Copiar legenda (selecionado)" e "Copiar caminho (selecionado)", que ficam no frame chamado `r_a`, por volta da linha 925 de `gui.py`), adicione um botão novo com o texto **"Postar no TikTok (selecionado)"** que chama `self._post_to_tiktok_selected`. Use o **mesmo estilo** (`style=sec`) e o mesmo padrão de `.pack(...)` dos botões vizinhos, para ficar visualmente igual.
 
 - [ ] **12.4 — Testar:** gere alguns clipes, selecione um na tabela e clique em **"Postar no TikTok (selecionado)"**. Deve acontecer: (a) abre a página de upload do TikTok no navegador, (b) abre a pasta com o clipe, (c) a legenda já cola com Ctrl+V. Complete o post arrastando o arquivo e colando a legenda. Rode `pytest` (essa mudança não tem teste automatizado — o teste é visual).
 
