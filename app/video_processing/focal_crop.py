@@ -550,6 +550,23 @@ def _compute_static_median_crop_cap(
     return _clamp_crop_xy(cx_scaled, cy_scaled, iw, ih, out_w, out_h)
 
 
+def _smooth_samples_ema(
+    samples: list[tuple[float, float, float, int]],
+    alpha: float = 0.35,
+) -> list[tuple[float, float, float, int]]:
+    """Suaviza (cx, cy) com EMA para o crop 'deslizar' em vez de saltar."""
+    if not samples:
+        return samples
+    out: list[tuple[float, float, float, int]] = []
+    _, sx, sy, spk0 = samples[0]
+    ema_x, ema_y = sx, sy
+    for (t, x, y, spk) in samples:
+        ema_x = alpha * x + (1 - alpha) * ema_x
+        ema_y = alpha * y + (1 - alpha) * ema_y
+        out.append((t, ema_x, ema_y, spk))
+    return out
+
+
 def _speaker_timeline_crop_segments(
     cap: object,
     face_detector,

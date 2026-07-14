@@ -78,6 +78,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-13 — última: 4B.1 — próxima: 4B.2 — testes: OK
 2026-07-13 — última: 4B.2 — próxima: 4B.3 — testes: OK
 2026-07-13 — última: 4B.3 — próxima: 5.1 — testes: OK
+2026-07-13 — última: 5.1 — próxima: 5.2 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -623,7 +624,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 **Objetivo:** o enquadramento deslizar suave em vez de saltar, e enquadrar melhor (rosto no terço superior).
 **Arquivo:** `app/video_processing/focal_crop.py`.
 
-- [ ] **5.1 — Suavizar a trilha (média móvel exponencial).** Em `focal_crop.py`, adicione esta função nova logo **antes** de `def _speaker_timeline_crop_segments(`:
+- [x] **5.1 — Suavizar a trilha (média móvel exponencial).** Em `focal_crop.py`, adicione esta função nova logo **antes** de `def _speaker_timeline_crop_segments(`:
   ```python
   def _smooth_samples_ema(
       samples: list[tuple[float, float, float, int]],
