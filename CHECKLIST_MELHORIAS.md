@@ -86,6 +86,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
 2026-07-14 — última: 6A.2 — próxima: 6A.3 — testes: OK
 2026-07-14 — última: 6A.3 — próxima: 6A.4 — testes: OK
 2026-07-14 — última: 6A.4 — próxima: 6A.5 — testes: OK
+2026-07-14 — última: 6A.5 — próxima: 6B.1 (opcional) ou 7.1 — testes: OK
 
 ### ⚠️ Regras para não conflitar entre chats
 
@@ -788,7 +789,7 @@ A implementação vai acontecer em **vários chats**. Cada chat novo **não lemb
   ```
   adicione `voiced=voiced,` como último argumento antes do `)`.
 
-- [ ] **6A.5 — Testar:** gere um clipe de podcast/entrevista com 2 pessoas. O foco deve ir para quem fala e **não** trocar quando a outra pessoa só balança a cabeça em silêncio. `pytest`.
+- [x] **6A.5 — Testar:** gere um clipe de podcast/entrevista com 2 pessoas. O foco deve ir para quem fala e **não** trocar quando a outra pessoa só balança a cabeça em silêncio. `pytest`.
 
 ### 6B — Modo faixas (split empilhado) — AVANÇADO
 
