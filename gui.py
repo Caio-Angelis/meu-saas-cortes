@@ -2131,8 +2131,7 @@ class CortesApp(tk.Tk):
             "LOCAL_TTS_PREFERRED": bool(self._prefer_local_tts.get()),
             "SMART_CROP_ENABLED": bool(self._smart_crop.get()),
             "USE_GPU_CLIP_ENCODE": bool(self._use_gpu_encode.get()),
-            # Split continua desligado na GUI (renderer 6B.4 adiado).
-            "SMART_CROP_SPLIT_ENABLED": False,
+            "SMART_CROP_SPLIT_ENABLED": True,
         }
 
     @staticmethod
@@ -2146,7 +2145,7 @@ class CortesApp(tk.Tk):
         _cfg.LOCAL_TTS_PREFERRED = bool(melhorias.get("LOCAL_TTS_PREFERRED"))
         _cfg.SMART_CROP_ENABLED = bool(melhorias.get("SMART_CROP_ENABLED"))
         _cfg.USE_GPU_CLIP_ENCODE = bool(melhorias.get("USE_GPU_CLIP_ENCODE"))
-        _cfg.SMART_CROP_SPLIT_ENABLED = bool(melhorias.get("SMART_CROP_SPLIT_ENABLED", False))
+        _cfg.SMART_CROP_SPLIT_ENABLED = bool(melhorias.get("SMART_CROP_SPLIT_ENABLED", True))
 
     def _limpar_temp(self) -> None:
         """Apaga arquivos de temp/ com mais de 2 dias (nunca toca em resultados/)."""

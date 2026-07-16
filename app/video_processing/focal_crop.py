@@ -836,6 +836,7 @@ def compute_crop_plan(
     Retorna:
       {"mode": "static", "x": int, "y": int}
       {"mode": "dynamic", "x_expr": str, "y_expr": str, "fallback_x": int, "fallback_y": int}
+      {"mode": "split", "left": (cx,cy), "right": (cx,cy), "src_w": int, "src_h": int}
     ou None.
     """
     out_w = out_w if out_w is not None else OUTPUT_VIDEO_WIDTH
@@ -898,9 +899,16 @@ def compute_crop_plan(
                 if centers is not None:
                     (lx, _ly), (rx, _ry) = centers
                     src_w2 = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 0
+                    src_h2 = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 0
                     # Se os dois estão longe (> 35% da largura), usa faixas.
                     if src_w2 > 0 and abs(rx - lx) > 0.35 * src_w2:
-                        return {"mode": "split", "left": centers[0], "right": centers[1]}
+                        return {
+                            "mode": "split",
+                            "left": centers[0],
+                            "right": centers[1],
+                            "src_w": src_w2,
+                            "src_h": src_h2,
+                        }
 
             segs = _speaker_timeline_crop_segments(
                 cap,

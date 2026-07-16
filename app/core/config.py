@@ -410,7 +410,7 @@ SUBTITLE_KARAOKE: bool = os.getenv("SUBTITLE_KARAOKE", "1").strip().lower() in (
 SUBTITLE_KARAOKE_HIGHLIGHT: str = os.getenv("SUBTITLE_KARAOKE_HIGHLIGHT", "#FFE000").strip()
 
 # Crop: usar layout empilhado (faixas) quando 2 rostos estão muito afastados.
-SMART_CROP_SPLIT_ENABLED: bool = os.getenv("SMART_CROP_SPLIT_ENABLED", "0").strip().lower() in ("1","true","yes","on")
+SMART_CROP_SPLIT_ENABLED: bool = os.getenv("SMART_CROP_SPLIT_ENABLED", "1").strip().lower() in ("1","true","yes","on")
 
 # Identidade visual (tudo no passe único; custo ~zero)
 VISUAL_GRADE: bool = os.getenv("VISUAL_GRADE", "1").strip().lower() in ("1","true","yes","on")

@@ -8,9 +8,21 @@ Model: cursor-grok-4.5-high (subagents)
 
 - Worktree from `a6564b0` (chore: ignore .worktrees)
 - Symlinks: `.venv`, `.env` (assets/fonts now real; audio SFX may be local symlinks)
-- Pytest atual: **157 passed** (158 baseline −1 teste heurística GPU duplicado na 3.1b)
+- Pytest atual: **161 passed** (+5 split; 1 env fail `ball.mp3` ausente se não deselect)
 
-## Sessão 2026-07-14 — HANDOFF
+## Sessão 2026-07-15 — 6B.4/6B.5
+
+**Última concluída:** 6B.4 + 6B.5 (split renderer)  
+**Próxima:** (coord)  
+**Testes:** OK (161 passed; deselect SFX sem asset)
+
+### Feito
+
+- Split `filter_complex` (`vstack`) em `subtitle_burner`; flag default `"1"`; GUI `True`
+- Unit tests `tests/test_subtitle_burner_split.py`
+- Docs: CHECKLIST, AI_CONTEXT, este ledger, `task-6B.4-report.md`
+
+## Sessão 2026-07-14 — HANDOFF (histórico)
 
 **Última concluída:** 7.1  
 **Próxima:** **7.2**  
@@ -23,11 +35,10 @@ Model: cursor-grok-4.5-high (subagents)
 - 6B.1: `SMART_CROP_SPLIT_ENABLED` em `config.py` (flag only)
 - 6B.2: `_two_people_centers` em `focal_crop.py`
 - 6B.3: `compute_crop_plan` pode retornar `mode: "split"` (ainda sem renderer)
-- 6B.4/6B.5 **ADIADO**: `SMART_CROP_SPLIT_ENABLED` default `"0"` + `.env=0`; sem `filter_complex` renderer (landmine KeyError fechada)
+- 6B.4/6B.5 **ADIADO** (depois implementado em 2026-07-15): ver acima
 - **7.1**: `VISUAL_GRADE` / `VISUAL_PROGRESS_BAR` / `VISUAL_PROGRESS_COLOR` / `VISUAL_WATERMARK_TEXT` em `config.py` (flags só; overlay em 7.2)
 
 ### Notas
 
-- Fase 6B encerrada via escape hatch; Fase 7 iniciada.
 - Sample `temp/checklist_1.6_sample_25s.mp4` não permite validar troca de falante (só 1 pessoa).
-- `.env` local: `CLIP_ENCODE_PARALLEL_GPU=4`, `SMART_CROP_SPLIT_ENABLED=0` (não commitado).
+- `.env` local pode ainda ter `SMART_CROP_SPLIT_ENABLED=0` (não commitado) — remover para usar o default on.

@@ -1,5 +1,7 @@
 # ── Segredos e credenciais ──────────────────────────
 .env
+.env.*
+!.env.example
 *.cookies.txt
 **/cookies.txt
 www.youtube.com_cookies.txt
@@ -20,10 +22,24 @@ data/
 *.m4a
 *.aac
 *.flac
+*.webm
+*.mkv
+*.mov
+*.avi
 *.srt
 *.ass
 *.zip
 *.txt.gz
+
+# Frames/dumps de verificação (fora de assets/)
+check_*.png
+*_frame*.png
+!assets/**
+
+# ── Bancos locais (web/store) ───────────────────────
+*.db
+*.sqlite
+*.sqlite3
 
 # ── Binários / pacotes pesados ──────────────────────
 *.deb
@@ -31,6 +47,7 @@ data/
 *.exe
 *.msi
 *.bin
+cloudflared*
 
 # ── Python ──────────────────────────────────────────
 __pycache__/
@@ -68,9 +85,10 @@ htmlcov/
 coverage.xml
 *.cover
 
-# ── IDE / editor ────────────────────────────────────
+# ── IDE / editor / agentes ──────────────────────────
 .idea/
 .vscode/
+.cursor/
 *.swp
 *.swo
 *~
@@ -82,3 +100,5 @@ Thumbs.db
 *.log
 # Git worktrees isolados
 .worktrees/
+# Saídas de ferramentas locais
+graphify-out/

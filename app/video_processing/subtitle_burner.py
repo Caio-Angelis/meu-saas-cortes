@@ -97,6 +97,85 @@ def _escape_filter_single_quoted(s: str) -> str:
     return s.replace("\\", "\\\\").replace("'", r"\'")
 
 
+def _ffprobe_frame_size(video_path: str) -> tuple[int, int] | None:
+    """Largura×altura do primeiro stream de vídeo via ffprobe, ou None."""
+    from app.core.config import FFPROBE_PATH
+
+    try:
+        r = subprocess.run(
+            [
+                FFPROBE_PATH,
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream=width,height",
+                "-of",
+                "csv=p=0:s=x",
+                video_path,
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+        parts = (r.stdout or "").strip().split("x")
+        if len(parts) == 2:
+            return int(parts[0]), int(parts[1])
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return None
+    return None
+
+
+def _band_crop_xy(
+    cx: float,
+    cy: float,
+    src_w: int,
+    src_h: int,
+    crop_w: int,
+    crop_h: int,
+) -> tuple[int, int, int, int]:
+    """Janela (cw, ch, x, y) centrada em (cx, cy), clampada ao quadro fonte."""
+    cw = min(int(crop_w), int(src_w))
+    ch = min(int(crop_h), int(src_h))
+    x = int(round(cx - cw / 2))
+    y = int(round(cy - ch / 2))
+    x = max(0, min(x, src_w - cw))
+    y = max(0, min(y, src_h - ch))
+    return cw, ch, x, y
+
+
+def _build_split_vstack_graph(
+    left: tuple[float, float],
+    right: tuple[float, float],
+    src_w: int,
+    src_h: int,
+    out_w: int,
+    out_h: int,
+    *,
+    input_label: str = "0:v",
+) -> str:
+    """
+    Filtergraph: left → faixa superior, right → inferior, vstack → [vsplit].
+    Centros em pixels da fonte; crop clampado aos bounds da fonte.
+    """
+    half = out_h // 2
+    lx, ly = float(left[0]), float(left[1])
+    rx, ry = float(right[0]), float(right[1])
+    cw_t, ch_t, tx, ty = _band_crop_xy(lx, ly, src_w, src_h, out_w, half)
+    cw_b, ch_b, bx, by = _band_crop_xy(rx, ry, src_w, src_h, out_w, half)
+    return (
+        f"[{input_label}]crop={cw_t}:{ch_t}:{tx}:{ty},"
+        f"scale={out_w}:{half}:force_original_aspect_ratio=increase,"
+        f"crop={out_w}:{half},setsar=1[top];"
+        f"[{input_label}]crop={cw_b}:{ch_b}:{bx}:{by},"
+        f"scale={out_w}:{half}:force_original_aspect_ratio=increase,"
+        f"crop={out_w}:{half},setsar=1[bot];"
+        f"[top][bot]vstack=inputs=2[vsplit]"
+    )
+
+
 def _prepare_scale_crop_overlay_vf(
     video_path: str,
     srt_path: str,
@@ -110,9 +189,12 @@ def _prepare_scale_crop_overlay_vf(
     *,
     clip_start: float | None = None,
     clip_end: float | None = None,
-) -> tuple[str, str, Path | None, Path]:
+) -> tuple[str, str, Path | None, Path, bool]:
     """
     Monta filter chain (scale/crop/ASS + drawtext). Gera .ass e arquivos auxiliares no disco.
+
+    Retorna (vf_or_fc, ass_path, hook_file, cta_file, is_filter_complex).
+    Se is_filter_complex, a string é um -filter_complex que termina em [vout].
     """
     from app.core.config import TIKTOK_SUBTITLE_FONT
     if fonte in (None, "", "Arial"):
@@ -169,6 +251,7 @@ def _prepare_scale_crop_overlay_vf(
         )
     escaped = _escape_srt_path(ass_path)
 
+    split_plan: dict | None = None
     scale_crop = f"scale={w}:{h}:force_original_aspect_ratio=increase"
     if SMART_CROP_ENABLED:
         vf_fp = fingerprint_file(video_path)
@@ -189,6 +272,8 @@ def _prepare_scale_crop_overlay_vf(
         if plan is not None:
             if plan["mode"] == "static":
                 scale_crop += f",crop={w}:{h}:{plan['x']}:{plan['y']}"
+            elif plan["mode"] == "split":
+                split_plan = plan
             else:
                 scale_crop += f",crop={w}:{h}:{plan['x_expr']}:{plan['y_expr']}"
         else:
@@ -247,8 +332,34 @@ def _prepare_scale_crop_overlay_vf(
 
     from app.core.config import FONTS_DIR
     fonts_clause = f":fontsdir='{_escape_srt_path(FONTS_DIR)}'"
-    vf = f"{scale_crop},subtitles='{escaped}'{fonts_clause}{hook_vf}{cta_vf}"
-    return vf, ass_path, hook_file, cta_file
+    overlay_tail = f"subtitles='{escaped}'{fonts_clause}{hook_vf}{cta_vf}"
+
+    if split_plan is not None:
+        src_w = int(split_plan.get("src_w") or 0)
+        src_h = int(split_plan.get("src_h") or 0)
+        if src_w <= 0 or src_h <= 0:
+            probed = _ffprobe_frame_size(video_path)
+            if probed is not None:
+                src_w, src_h = probed
+        if src_w <= 0 or src_h <= 0:
+            # Sem tamanho da fonte: cai no cover estático (evita KeyError / crop inválido).
+            vf = f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},{overlay_tail}"
+            return vf, ass_path, hook_file, cta_file, False
+        left = tuple(split_plan["left"])
+        right = tuple(split_plan["right"])
+        split_graph = _build_split_vstack_graph(
+            (float(left[0]), float(left[1])),
+            (float(right[0]), float(right[1])),
+            src_w,
+            src_h,
+            w,
+            h,
+        )
+        fc = f"{split_graph};[vsplit]{overlay_tail}[vout]"
+        return fc, ass_path, hook_file, cta_file, True
+
+    vf = f"{scale_crop},{overlay_tail}"
+    return vf, ass_path, hook_file, cta_file, False
 
 
 def _unlink_burn_sidecars(ass_path: str, hook_file: Path | None, cta_file: Path) -> None:
@@ -276,7 +387,7 @@ def burn_subtitles(
     use_gpu_encoder: bool = False,
 ) -> str:
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    vf, ass_path, hook_file, cta_file = _prepare_scale_crop_overlay_vf(
+    vf, ass_path, hook_file, cta_file, is_fc = _prepare_scale_crop_overlay_vf(
         video_path,
         srt_path,
         posicao,
@@ -289,30 +400,51 @@ def burn_subtitles(
     )
 
     cpu_venc = ["-c:v", "libx264", "-pix_fmt", "yuv420p"]
-    venc: list[str] = gpu_clip_encoder_ffmpeg_args() if use_gpu_encoder else cpu_venc
-    th = clip_ffmpeg_threads_args(use_gpu_encoder=use_gpu_encoder)
-    va_pre = ffmpeg_vaapi_hwdevice_args() if (use_gpu_encoder and clip_gpu_uses_vaapi()) else []
-    vf_full = vf + ffmpeg_vaapi_vf_hwupload_suffix(use_gpu_encoder=use_gpu_encoder)
+    # Split usa -filter_complex; VA-API/hwupload não é encadeado — força CPU neste modo.
+    use_gpu = bool(use_gpu_encoder) and not is_fc
+    venc: list[str] = gpu_clip_encoder_ffmpeg_args() if use_gpu else cpu_venc
+    th = clip_ffmpeg_threads_args(use_gpu_encoder=use_gpu)
+    va_pre = ffmpeg_vaapi_hwdevice_args() if (use_gpu and clip_gpu_uses_vaapi()) else []
 
-    cmd = [
-        FFMPEG_PATH,
-        *va_pre,
-        *th,
-        "-i",
-        video_path,
-        "-vf",
-        vf_full,
-        *venc,
-        "-c:a",
-        "copy",
-        output_path,
-        "-y",
-    ]
+    if is_fc:
+        cmd = [
+            FFMPEG_PATH,
+            *th,
+            "-i",
+            video_path,
+            "-filter_complex",
+            vf,
+            "-map",
+            "[vout]",
+            "-map",
+            "0:a?",
+            *cpu_venc,
+            "-c:a",
+            "copy",
+            output_path,
+            "-y",
+        ]
+    else:
+        vf_full = vf + ffmpeg_vaapi_vf_hwupload_suffix(use_gpu_encoder=use_gpu)
+        cmd = [
+            FFMPEG_PATH,
+            *va_pre,
+            *th,
+            "-i",
+            video_path,
+            "-vf",
+            vf_full,
+            *venc,
+            "-c:a",
+            "copy",
+            output_path,
+            "-y",
+        ]
 
     try:
         run_cancelable(cmd, capture_output=True, text=True, check=True)
     except subprocess.CalledProcessError as e:
-        if use_gpu_encoder:
+        if use_gpu and not is_fc:
             cmd_cpu = [
                 FFMPEG_PATH,
                 *th,
@@ -367,7 +499,7 @@ def cut_and_burn_subtitles(
     tempo = 1.0 + CLIP_SPEED_UP_PERCENT / 100.0
     vf_cut = f"noise=alls=1:allf=t+u,eq=brightness=0.01,setpts=PTS/{tempo}"
 
-    vf_overlay, ass_path, hook_file, cta_file = _prepare_scale_crop_overlay_vf(
+    vf_overlay, ass_path, hook_file, cta_file, is_fc = _prepare_scale_crop_overlay_vf(
         source_video_path,
         srt_path,
         posicao,
@@ -393,46 +525,84 @@ def cut_and_burn_subtitles(
             f",drawtext=text='{wm}':font='Arial':fontsize=34:fontcolor=white@0.75:"
             f"x=w-text_w-40:y=h-text_h-40:borderw=2:bordercolor=black@0.6"
         )
-    vf = f"{vf_cut},{vf_overlay}{extra}"
     af = f"atempo={tempo},loudnorm=I=-14:TP=-1.0:LRA=11"
 
     cpu_venc = ["-c:v", "libx264", "-pix_fmt", "yuv420p"]
-    venc: list[str] = gpu_clip_encoder_ffmpeg_args() if use_gpu_encoder else cpu_venc
-    th = clip_ffmpeg_threads_args(use_gpu_encoder=use_gpu_encoder)
-    va_pre = ffmpeg_vaapi_hwdevice_args() if (use_gpu_encoder and clip_gpu_uses_vaapi()) else []
-    vf_full = vf + ffmpeg_vaapi_vf_hwupload_suffix(use_gpu_encoder=use_gpu_encoder)
+    # Split: -filter_complex + CPU (sem VA-API/hwupload nesta variante).
+    use_gpu = bool(use_gpu_encoder) and not is_fc
+    venc: list[str] = gpu_clip_encoder_ffmpeg_args() if use_gpu else cpu_venc
+    th = clip_ffmpeg_threads_args(use_gpu_encoder=use_gpu)
+    va_pre = ffmpeg_vaapi_hwdevice_args() if (use_gpu and clip_gpu_uses_vaapi()) else []
 
-    cmd_base = [
-        FFMPEG_PATH,
-        *va_pre,
-        "-fflags",
-        "+bitexact",
-        *th,
-        "-ss",
-        str(clip_start),
-        "-i",
-        source_video_path,
-        "-t",
-        str(duration),
-        "-map_metadata",
-        "-1",
-        "-vf",
-        vf_full,
-        "-af",
-        af,
-        "-c:a",
-        "aac",
-        "-avoid_negative_ts",
-        "1",
-        "-y",
-        output_path,
-    ]
-    cmd = [*cmd_base[: cmd_base.index("-c:a")], *venc, *cmd_base[cmd_base.index("-c:a") :]]
+    if is_fc:
+        body = vf_overlay.replace("[0:v]", "[vpre]")
+        if extra and body.endswith("[vout]"):
+            body = body[: -len("[vout]")] + f"{extra}[vout]"
+        fc = f"[0:v]{vf_cut}[vpre];{body}"
+        cmd = [
+            FFMPEG_PATH,
+            "-fflags",
+            "+bitexact",
+            *th,
+            "-ss",
+            str(clip_start),
+            "-i",
+            source_video_path,
+            "-t",
+            str(duration),
+            "-map_metadata",
+            "-1",
+            "-filter_complex",
+            fc,
+            "-map",
+            "[vout]",
+            "-map",
+            "0:a?",
+            "-af",
+            af,
+            *cpu_venc,
+            "-c:a",
+            "aac",
+            "-avoid_negative_ts",
+            "1",
+            "-y",
+            output_path,
+        ]
+    else:
+        vf = f"{vf_cut},{vf_overlay}{extra}"
+        vf_full = vf + ffmpeg_vaapi_vf_hwupload_suffix(use_gpu_encoder=use_gpu)
+        cmd_base = [
+            FFMPEG_PATH,
+            *va_pre,
+            "-fflags",
+            "+bitexact",
+            *th,
+            "-ss",
+            str(clip_start),
+            "-i",
+            source_video_path,
+            "-t",
+            str(duration),
+            "-map_metadata",
+            "-1",
+            "-vf",
+            vf_full,
+            "-af",
+            af,
+            "-c:a",
+            "aac",
+            "-avoid_negative_ts",
+            "1",
+            "-y",
+            output_path,
+        ]
+        cmd = [*cmd_base[: cmd_base.index("-c:a")], *venc, *cmd_base[cmd_base.index("-c:a") :]]
 
     try:
         run_cancelable(cmd, capture_output=True, text=True, check=True)
     except subprocess.CalledProcessError as e:
-        if use_gpu_encoder:
+        if use_gpu and not is_fc:
+            vf = f"{vf_cut},{vf_overlay}{extra}"
             cmd_cpu = [
                 FFMPEG_PATH,
                 "-fflags",

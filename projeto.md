@@ -5,7 +5,7 @@
 > Se você (humano ou IA) quiser mudar o comportamento do produto, **edite este documento primeiro** e só então peça a implementação alinhada a ele.
 
 **Última revisão:** 2026-05-20 (expansão: Geradores de Conteúto — Módulo de Quizzes)  
-**Relacionados (não substituem este arquivo):** `README.md` (guia rápido), `AI_CONTEXT.md` (mapa técnico para IAs), `checklist.md` (pendências de engenharia).
+**Relacionados (não substituem este arquivo):** `README.md` (guia rápido), `AI_CONTEXT.md` (mapa técnico para IAs). Checklists técnicos foram concluídos e removidos (2026-07-15); histórico em `.sdd-briefs/`.
 
 ---
 
@@ -401,7 +401,7 @@ Cobertura atual: lógica pura (segmentos, cache, parse JSON, nomes, export zip).
 
 ### Pendências de engenharia
 
-Ver `checklist.md` — não duplicar aqui; o checklist é operacional, este arquivo é **produto + arquitetura**.
+Checklists técnicos (`checklist.md`, `CHECKLIST_MELHORIAS.md`) foram concluídos e removidos em 2026-07-15. Novas pendências técnicas: registrar em `AI_CONTEXT.md` ou issues; este arquivo permanece **produto + arquitetura**.
 
 ### Roadmap de produto (neste documento)
 
@@ -687,7 +687,7 @@ Novos formatos (ex.: **Histórias Dark**) seguem o mesmo padrão:
 
 1. Edite a seção relevante (ex.: adicionar idioma `es` na tabela de idiomas e no contrato de valor).
 2. Peça implementação citando: *“siga o `projeto.md` atualizado”*.
-3. Se a mudança for só técnica interna (refactor, performance), pode ir só no `checklist.md` ou `AI_CONTEXT.md`.
+3. Se a mudança for só técnica interna (refactor, performance), pode ir só no `AI_CONTEXT.md`.
 
 ### Para agentes de IA
 
@@ -707,7 +707,6 @@ Ao receber uma tarefa de código:
 | **AI_CONTEXT.md** | Mapa rápido do código para IAs |
 | **README.md** | Instalação e uso rápido |
 | **FLUXO_DE_DADOS.md** | Fluxo simplificado (pode estar atrás do código) |
-| **checklist.md** | Tarefas técnicas pendentes |
 
 ---
 
