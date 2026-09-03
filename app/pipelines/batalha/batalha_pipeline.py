@@ -11,13 +11,18 @@ import json
 import logging
 import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from queue import Queue
 from threading import Event
-from typing import Any, Callable, TypedDict
+from typing import Any, TypedDict
 
 from app.ai_integrations.groq_chat import groq_user_message_text
+from app.core.cancel import raise_if_cancelled
+from app.core.caption_text import remove_links_from_caption
+from app.core.clip_output_naming import sanitize_clip_output_stem
+from app.core.config import EDGE_TTS_VOICE_PT, GROQ_CHAT_MODEL, OUTPUT_DIR, TEMP_DIR
 from app.pipelines.batalha.batalha_images import (
     cleanup_batalha_downloaded_assets,
     ensure_logo_search_term,
@@ -25,9 +30,6 @@ from app.pipelines.batalha.batalha_images import (
     normalize_hex_color,
     save_avatar_png,
 )
-from app.core.cancel import raise_if_cancelled
-from app.core.clip_output_naming import sanitize_clip_output_stem
-from app.core.config import EDGE_TTS_VOICE_PT, OUTPUT_DIR, TEMP_DIR
 
 _log = logging.getLogger("batalha_pipeline")
 
@@ -45,7 +47,7 @@ BATALHA_MODOS = (
 )
 BATALHA_MODO_DEFAULT = BATALHA_MOD_TAMANHO
 
-BATALHA_LLM_MODEL = "llama-3.3-70b-versatile"
+BATALHA_LLM_MODEL = GROQ_CHAT_MODEL
 BATALHA_LLM_TEMPERATURE = 0.45
 
 MAX_OPPONENT_NAME_CHARS = 40
@@ -482,7 +484,7 @@ def _normalize_payload(payload: dict[str, Any]) -> tuple[str, str, str]:
 
 def _save_batalha_caption(video_path: Path, legenda: str) -> Path:
     caption_path = video_path.with_suffix(".txt")
-    caption_path.write_text(legenda.strip() + "\n", encoding="utf-8")
+    caption_path.write_text(remove_links_from_caption(legenda) + "\n", encoding="utf-8")
     return caption_path
 
 
@@ -583,7 +585,10 @@ def run_batalha_pipeline_from_payload(
     )
     _prog(0.32)
 
-    from app.pipelines.batalha.batalha_ffmpeg import assemble_batalha_video_ffmpeg, probe_audio_duration_sec
+    from app.pipelines.batalha.batalha_ffmpeg import (
+        assemble_batalha_video_ffmpeg,
+        probe_audio_duration_sec,
+    )
     from app.pipelines.batalha.batalha_frames import (
         BATALHA_MOD_PLINKO,
         create_simulation,
@@ -647,7 +652,10 @@ def run_batalha_pipeline_from_payload(
     silent_path = assets.work_dir / "video_silent.mp4"
 
     if modo_norm == BATALHA_MOD_PLINKO and victory_narration_paths is not None:
-        from app.pipelines.batalha.batalha_ffmpeg import encode_simulation_to_silent_mp4, mux_batalha_video_with_audio
+        from app.pipelines.batalha.batalha_ffmpeg import (
+            encode_simulation_to_silent_mp4,
+            mux_batalha_video_with_audio,
+        )
 
         encode_simulation_to_silent_mp4(
             sim,

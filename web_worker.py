@@ -10,6 +10,10 @@ Na raiz do projeto:
 
 from __future__ import annotations
 
+import sys
+
+sys.dont_write_bytecode = True
+
 import _venv_reexec
 
 _venv_reexec.ensure_venv(__file__)
@@ -19,7 +23,6 @@ from app.core.linux_desktop_bootstrap import apply_linux_desktop_defaults
 apply_linux_desktop_defaults()
 
 import os
-import sys
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent

@@ -17,7 +17,12 @@ def process_playlist_item_task(item_id: int) -> None:
     if not item:
         _log.warning("Item %s não encontrado", item_id)
         return
-    if not item.can_process:
+    # A API marca o item como queued antes de disparar a thread/RQ. Aceitar
+    # esse estado evita que o worker perca o job numa corrida de inicialização.
+    if (
+        item.workflow_status != "pendente"
+        or item.pipeline_status not in ("idle", "error", "queued")
+    ):
         _log.info(
             "Item %s ignorado (status %s / %s)",
             item_id,

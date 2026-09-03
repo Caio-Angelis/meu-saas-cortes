@@ -4,15 +4,20 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
+import re
 import shlex
 import shutil
 import subprocess
 import sys
+import unicodedata
 import uuid
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+
+from app.core.source_history import canonical_source_key, get_source_history
 
 _log = logging.getLogger("ytdlp_download")
 
@@ -30,6 +35,367 @@ class VideoSourceAttribution:
 class DownloadResult:
     path: str
     attribution: VideoSourceAttribution | None = None
+
+
+@dataclass(frozen=True)
+class ThemeSearchHit:
+    """Resultado da busca por tema, incluindo a razão do ranking local."""
+
+    url: str
+    title: str
+    view_count: int
+    duration_sec: float
+    channel: str | None = None
+    source_score: float = 0.0
+    relevance_score: float = 0.0
+    format_score: float = 0.0
+    ranking_reason: str = ""
+
+
+def _theme_min_duration_sec(override: float | None = None) -> float:
+    if override is not None:
+        return float(override)
+    raw = (os.getenv("YT_THEME_MIN_DURATION_SEC") or "600").strip()
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return 600.0
+
+
+def _theme_search_n(override: int | None = None) -> int:
+    if override is not None:
+        n = int(override)
+    else:
+        raw = (os.getenv("YT_THEME_SEARCH_N") or "20").strip()
+        try:
+            n = int(raw)
+        except ValueError:
+            n = 20
+    return max(1, min(50, n))
+
+
+def _normalize_search_text(value: object) -> str:
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    text = "".join(char for char in text if not unicodedata.combining(char))
+    return re.sub(r"[^a-z0-9]+", " ", text.casefold()).strip()
+
+
+def _query_tokens(query: str) -> set[str]:
+    stop = {"a", "o", "de", "da", "do", "e", "em", "para", "com", "the", "and", "of"}
+    return {token for token in _normalize_search_text(query).split() if len(token) >= 3 and token not in stop}
+
+
+def _view_score(view_count: int, view_values: list[int]) -> float:
+    if not view_values or max(view_values) <= 0:
+        return 4.0
+    positive = [max(0, value) for value in view_values]
+    low = min(positive)
+    high = max(positive)
+    if high == low:
+        return 5.0
+    log_value = math.log1p(max(0, view_count))
+    log_low = math.log1p(low)
+    log_high = math.log1p(high)
+    return max(0.0, min(10.0, 10.0 * (log_value - log_low) / (log_high - log_low)))
+
+
+def _source_scores(data: dict, query: str, *, view_values: list[int]) -> dict[str, object]:
+    title = str(data.get("title") or "").strip()
+    channel = str(data.get("channel") or data.get("uploader") or "").strip()
+    searchable = _normalize_search_text(f"{title} {channel}")
+    query_norm = _normalize_search_text(query)
+    query_tokens = _query_tokens(query)
+    title_tokens = set(searchable.split())
+    overlap = len(query_tokens & title_tokens) / len(query_tokens) if query_tokens else 0.5
+    phrase_bonus = 1.5 if query_norm and query_norm in searchable else 0.0
+    relevance = max(0.0, min(10.0, overlap * 8.5 + phrase_bonus)) if query_tokens else 5.0
+
+    positive_format_terms = (
+        "entrevista",
+        "podcast",
+        "conversa",
+        "papo",
+        "debate",
+        "fala sobre",
+        "explica",
+        "historia",
+        "bastidores",
+        "corte",
+        "cortes",
+        "perguntas",
+        "talk",
+    )
+    negative_format_terms = (
+        "musica completa",
+        "full album",
+        "album completo",
+        "official audio",
+        "clipe oficial",
+        "karaoke",
+        "instrumental",
+        "lyrics",
+        "playthrough",
+        "cover completo",
+        "1 hour loop",
+    )
+    positive_hits = sum(term in searchable for term in positive_format_terms)
+    negative_hits = sum(term in searchable for term in negative_format_terms)
+    format_score = max(0.0, min(10.0, 5.0 + positive_hits * 1.35 - negative_hits * 2.4))
+
+    duration_raw = data.get("duration")
+    try:
+        duration = float(duration_raw) if duration_raw is not None else 0.0
+    except (TypeError, ValueError):
+        duration = 0.0
+    if duration <= 0:
+        duration_score = 4.0
+    elif duration < 600:
+        duration_score = 2.0
+    elif duration <= 5400:
+        duration_score = 9.0
+    elif duration <= 10_800:
+        duration_score = 6.5
+    else:
+        duration_score = 3.5
+
+    known_entity_terms = (
+        "kiko loureiro",
+        "slash",
+        "john mayer",
+        "steve vai",
+        "joe satriani",
+        "jimi hendrix",
+        "metallica",
+        "guns n roses",
+        "megadeth",
+        "pink floyd",
+        "guitarra",
+        "violao",
+        "blues",
+        "rock",
+        "pentatonica",
+        "improvisacao",
+    )
+    entity_score = 8.0 if any(term in searchable for term in known_entity_terms) else 4.0
+    try:
+        view_count = int(data.get("view_count") or 0)
+    except (TypeError, ValueError):
+        view_count = 0
+    source_score = (
+        relevance * 0.35
+        + format_score * 0.25
+        + duration_score * 0.10
+        + entity_score * 0.10
+        + _view_score(view_count, view_values) * 0.20
+    )
+    reason_parts = [f"relevância {relevance:.1f}", f"formato falado {format_score:.1f}"]
+    if view_count:
+        reason_parts.append(f"views {view_count:,}")
+    return {
+        "source_score": round(source_score, 2),
+        "relevance_score": round(relevance, 2),
+        "format_score": round(format_score, 2),
+        "duration_score": round(duration_score, 2),
+        "duration_sec": duration,
+        "view_count": view_count,
+        "ranking_reason": "; ".join(reason_parts),
+    }
+
+
+def rank_theme_sources(
+    entries: list[dict],
+    *,
+    query: str = "",
+    min_duration_sec: float = 600.0,
+    exclude_source_keys: set[str] | None = None,
+) -> list[ThemeSearchHit]:
+    """
+    Ranqueia fontes por relevância + formato falado + duração + views logarítmicas.
+    `query` é passado como argumento opcional para manter compatibilidade com chamadas antigas.
+    """
+    return _rank_theme_sources(
+        entries,
+        query=query,
+        min_duration_sec=min_duration_sec,
+        exclude_source_keys=exclude_source_keys,
+    )
+
+
+def _rank_theme_sources(
+    entries: list[dict],
+    *,
+    query: str,
+    min_duration_sec: float,
+    exclude_source_keys: set[str] | None,
+) -> list[ThemeSearchHit]:
+    usable: list[tuple[dict, str, float]] = []
+    known_duration_count = 0
+    for data in entries:
+        if not isinstance(data, dict):
+            continue
+        duration_raw = data.get("duration")
+        try:
+            duration_sec = float(duration_raw) if duration_raw is not None else 0.0
+        except (TypeError, ValueError):
+            duration_sec = 0.0
+        if duration_sec > 0:
+            known_duration_count += 1
+        if duration_sec > 0 and duration_sec < min_duration_sec:
+            continue
+        url = (data.get("webpage_url") or data.get("url") or "").strip()
+        vid = (data.get("id") or "").strip()
+        if (not url or not url.startswith(("http://", "https://"))) and vid and not vid.startswith(
+            "http"
+        ):
+            url = f"https://www.youtube.com/watch?v={vid}"
+        if not url or url.startswith("ytsearch"):
+            continue
+        try:
+            if exclude_source_keys and canonical_source_key(url) in exclude_source_keys:
+                continue
+        except (ValueError, UnicodeError):
+            pass
+        usable.append((data, url, duration_sec))
+
+    # Com duração conhecida, não arriscamos escolher um resultado curto/indefinido. Se todos
+    # vierem sem duração, ainda assim a busca funciona com uma penalidade neutra.
+    if known_duration_count:
+        usable = [item for item in usable if item[2] <= 0 or item[2] >= min_duration_sec]
+        usable = [item for item in usable if item[2] > 0]
+    if not usable:
+        return []
+    view_values: list[int] = []
+    for data, _url, _duration in usable:
+        try:
+            view_values.append(max(0, int(data.get("view_count") or 0)))
+        except (TypeError, ValueError):
+            view_values.append(0)
+
+    hits: list[ThemeSearchHit] = []
+    for data, url, duration_sec in usable:
+        score = _source_scores(data, query, view_values=view_values)
+        title = (data.get("title") or "sem título").strip() or "sem título"
+        channel = (data.get("channel") or data.get("uploader") or "").strip() or None
+        hits.append(
+            ThemeSearchHit(
+                url=url,
+                title=title,
+                view_count=int(score["view_count"]),
+                duration_sec=duration_sec,
+                channel=channel,
+                source_score=float(score["source_score"]),
+                relevance_score=float(score["relevance_score"]),
+                format_score=float(score["format_score"]),
+                ranking_reason=str(score["ranking_reason"]),
+            )
+        )
+    return sorted(hits, key=lambda hit: (hit.source_score, hit.view_count), reverse=True)
+
+
+def pick_top_viewed_among_long(
+    entries: list[dict],
+    *,
+    min_duration_sec: float = 600.0,
+    exclude_source_keys: set[str] | None = None,
+    query: str = "",
+) -> ThemeSearchHit | None:
+    """Compatibilidade histórica: agora devolve o primeiro do source_score."""
+    ranked = _rank_theme_sources(
+        entries,
+        query=query,
+        min_duration_sec=min_duration_sec,
+        exclude_source_keys=exclude_source_keys,
+    )
+    return ranked[0] if ranked else None
+
+
+def search_youtube_top_by_views(
+    query: str,
+    *,
+    min_duration_sec: float | None = None,
+    search_n: int | None = None,
+) -> ThemeSearchHit:
+    """
+    Busca no YouTube via yt-dlp (`ytsearchN:query`), filtra vídeos longos e
+    devolve o primeiro pelo `source_score`. Não baixa o vídeo.
+    """
+    q = (query or "").strip()
+    if not q:
+        raise ValueError("Tema de busca vazio.")
+
+    ytdlp_cmd = resolve_ytdlp_cmd()
+    if not ytdlp_cmd:
+        raise FileNotFoundError(
+            "yt-dlp não encontrado. Instale: pip install -U 'yt-dlp[default]' "
+            "(ou defina YTDLP_PATH no ambiente)."
+        )
+
+    min_dur = _theme_min_duration_sec(min_duration_sec)
+    n = _theme_search_n(search_n)
+    search_target = f"ytsearch{n}:{q}"
+    cookies = _cookie_argv()
+    child_env = _ytdlp_subprocess_env()
+    cmd: list[str] = [
+        *ytdlp_cmd,
+        "--flat-playlist",
+        "--dump-json",
+        "--skip-download",
+        "--no-warnings",
+        *cookies,
+        search_target,
+    ]
+    _log.info("Busca YouTube por tema: %s (N=%s, min_dur=%ss)", q, n, int(min_dur))
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=120,
+            env=child_env,
+        )
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"Busca YouTube expirou para tema «{q}».") from e
+
+    entries: list[dict] = []
+    for line in (proc.stdout or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            data = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(data, dict):
+            entries.append(data)
+
+    if proc.returncode != 0 and not entries:
+        err = (proc.stderr or "").strip() or f"código {proc.returncode}"
+        raise RuntimeError(f"yt-dlp falhou na busca por tema «{q}»: {err[:300]}")
+
+    used_source_keys = get_source_history().used_keys()
+    hit = pick_top_viewed_among_long(
+        entries,
+        min_duration_sec=min_dur,
+        exclude_source_keys=used_source_keys,
+        query=q,
+    )
+    if hit is None:
+        mins = max(1, int(round(min_dur / 60.0)))
+        raise RuntimeError(
+            f"Nenhum vídeo novo com ≥ {mins} min encontrado para «{q}» "
+            f"(avaliados {len(entries)} resultado(s) da busca)."
+        )
+    _log.info(
+        "Tema «%s» → %s (source_score %.2f, %s views, %.0f s)",
+        q,
+        hit.title,
+        hit.source_score,
+        f"{hit.view_count:,}",
+        hit.duration_sec,
+    )
+    return hit
 
 
 def attribution_from_ytdlp_info(data: dict) -> VideoSourceAttribution | None:
@@ -136,8 +502,14 @@ def collect_urls_from_lines(text: str) -> list[str]:
     out: list[str] = []
     for line in (text or "").splitlines():
         u = normalize_media_url(line)
-        if u and u not in seen:
-            seen.add(u)
+        if not u:
+            continue
+        try:
+            key = canonical_source_key(u)
+        except (ValueError, UnicodeError):
+            key = u
+        if key not in seen:
+            seen.add(key)
             out.append(u)
     return out
 
@@ -301,7 +673,12 @@ def _run_ytdlp(cmd: list[str], *, env: dict[str, str]) -> int:
     return int(proc.wait())
 
 
-def download_video(url: str, dest_dir: str | Path, *, no_playlist: bool = True) -> DownloadResult:
+def _download_video_untracked(
+    url: str,
+    dest_dir: str | Path,
+    *,
+    no_playlist: bool = True,
+) -> DownloadResult:
     """
     Baixa um vídeo com yt-dlp para dest_dir.
 
@@ -411,3 +788,33 @@ def download_video(url: str, dest_dir: str | Path, *, no_playlist: bool = True) 
             attribution.channel,
         )
     return DownloadResult(path=video_path, attribution=attribution)
+
+
+def download_video(url: str, dest_dir: str | Path, *, no_playlist: bool = True) -> DownloadResult:
+    """Baixa uma fonte nova ou reutiliza o arquivo local já baixado."""
+
+    history = get_source_history()
+    existing = history.get_downloaded(url)
+    if existing is not None:
+        _log.info("Fonte já baixada; reutilizando arquivo local: %s", existing.path)
+        attribution = (
+            VideoSourceAttribution(channel=existing.channel, source_url=url.strip())
+            if existing.channel
+            else None
+        )
+        return DownloadResult(path=existing.path, attribution=attribution)
+
+    source_key = history.claim(url)
+    try:
+        result = _download_video_untracked(url, dest_dir, no_playlist=no_playlist)
+    except Exception as exc:
+        history.mark_failed(source_key, str(exc))
+        raise
+
+    channel = result.attribution.channel if result.attribution else None
+    history.mark_downloaded(
+        source_key,
+        downloaded_path=result.path,
+        channel=channel,
+    )
+    return result

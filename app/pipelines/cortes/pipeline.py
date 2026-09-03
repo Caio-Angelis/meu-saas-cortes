@@ -5,6 +5,7 @@ import os
 import shutil
 import threading
 import time
+import uuid
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -14,32 +15,43 @@ from app.ai_integrations.tiktok_caption import (
     generate_tiktok_post_caption,
     save_tiktok_caption_file,
 )
-from app.download.ytdlp_download import VideoSourceAttribution, lookup_source_attribution
 from app.ai_integrations.transcriber import transcribe_audio
 from app.ai_integrations.translator import translate_segments
-from app.ai_integrations.viral_analyzer import analyze_viral_moments
+from app.ai_integrations.viral_analyzer import (
+    VIRAL_ANALYZER_VERSION,
+    ViralAnalysisResult,
+    analyze_viral_moments,
+)
+from app.analytics.content_profile import load_content_performance_profile
+from app.analytics.retention_loop import load_growth_profile
 from app.core.cache import fingerprint_file, write_json
-from app.core.clip_output_naming import sanitize_clip_output_stem
 from app.core.cache_pipeline import (
+    load_cached_moment_analysis,
     load_cached_moments,
     load_cached_segments,
     load_cached_translated_segments,
+    save_cached_moment_analysis,
     save_cached_moments,
     save_cached_segments,
     save_cached_translated_segments,
 )
 from app.core.cancel import raise_if_cancelled, reset_cancel
+from app.core.clip_output_naming import sanitize_clip_output_stem
 from app.core.config import (
+    CLIP_DURATION_EXPLICIT,
     CLIP_ENCODE_PARALLEL_CPU,
     CLIP_ENCODE_PARALLEL_GPU,
-    CLIP_GPU_ENCODER,
     CLIP_SPEED_UP_PERCENT,
     DUB_TRIM_SILENCE,
     OUTPUT_DIR,
     TEMP_DIR,
     USE_GPU_CLIP_ENCODE,
+    VIRAL_CANDIDATE_COUNT,
+    VIRAL_CLIPS_COUNT,
+    VIRAL_SELECTION_PROFILE,
     pipeline_thread_pool_max_workers,
 )
+from app.download.ytdlp_download import VideoSourceAttribution, lookup_source_attribution
 from app.subtitle.srt_generator import generate_srt
 from app.video_processing.audio_extractor import extract_audio
 from app.video_processing.subtitle_burner import cut_and_burn_subtitles
@@ -49,11 +61,25 @@ from app.video_processing.tts_dubber import (
     mux_video_with_new_audio,
     remove_long_silence_from_video,
 )
+from app.video_processing.video_splitter import (
+    cleanup_split_directory,
+    split_video_into_chunks,
+)
 
 _log = logging.getLogger("pipeline")
 
 _cpu_enc_sem = threading.BoundedSemaphore(max(1, CLIP_ENCODE_PARALLEL_CPU))
 _gpu_enc_sem = threading.BoundedSemaphore(max(1, CLIP_ENCODE_PARALLEL_GPU))
+_TRANSLATION_ERROR_MARKERS = (
+    "error 500",
+    "server error",
+    "there was an error",
+    "please try again later",
+    "erro 500",
+    "erro do servidor",
+    "servidor falhou",
+    "tente novamente mais tarde",
+)
 
 
 def _safe_progress(cb: Callable[[float], None] | None, x: float) -> None:
@@ -77,13 +103,21 @@ def _write_run_manifest(
 ) -> str:
     ts = time.strftime("%Y%m%d_%H%M%S")
     manifest_path = OUTPUT_DIR / f"{video_name}__run_manifest_{ts}.json"
+    selection_info = cache_hits.get("_selection") if isinstance(cache_hits, dict) else None
+    public_cache_hits = {
+        key: value for key, value in cache_hits.items() if key != "_selection"
+    }
     payload = {
         "video_path": video_path,
         "video_name": video_name,
         "video_fingerprint": video_fp,
         "options": options,
-        "cache_hits": cache_hits,
+        "cache_hits": public_cache_hits,
         "moments": moments,
+        "selection": selection_info or {
+            "profile": VIRAL_SELECTION_PROFILE,
+            "candidates_considered": moments,
+        },
         "outputs": outputs,
         "created_at": ts,
     }
@@ -153,6 +187,19 @@ def _cleanup(*paths: str) -> None:
             os.remove(p)
 
 
+def _translation_segments_are_usable(
+    translated: list[dict] | None,
+    original: list[dict],
+) -> bool:
+    if translated is None or len(translated) != len(original):
+        return False
+    for segment in translated:
+        text = " ".join(str(segment.get("text") or "").casefold().split())
+        if not text or any(marker in text for marker in _TRANSLATION_ERROR_MARKERS):
+            return False
+    return True
+
+
 def _clip_uses_gpu_encoder(clip_index: int, total_clips: int) -> bool:
     """Todos os clipes usam o encoder de GPU (NVENC) quando habilitado."""
     return USE_GPU_CLIP_ENCODE
@@ -174,6 +221,7 @@ def _process_clip_task(
     opacidade: int,
     dub_to: str | None,
     tts_voice: str | None,
+    outro_text: str | None = None,
     source_attribution: VideoSourceAttribution | None = None,
     precomputed_se: tuple[list[float], list[float]] | None = None,
 ) -> str:
@@ -187,7 +235,13 @@ def _process_clip_task(
         target=target_language,
         segments=clip_segments,
     )
-    if translated is None:
+    if not _translation_segments_are_usable(translated, clip_segments):
+        if translated is not None:
+            _log.warning(
+                "Cache de tradução inválido para o clipe %s/%s; refazendo sem a resposta de erro.",
+                clip_index,
+                total_clips,
+            )
         _log.info(
             "Clipe %s/%s: a traduzir segmentos para %s…",
             clip_index,
@@ -195,6 +249,13 @@ def _process_clip_task(
             target_language,
         )
         translated = translate_segments(clip_segments, source="auto", target=target_language)
+        if not _translation_segments_are_usable(translated, clip_segments):
+            _log.warning(
+                "Tradução indisponível para o clipe %s/%s; usando a transcrição original.",
+                clip_index,
+                total_clips,
+            )
+            translated = clip_segments
         save_cached_translated_segments(
             video_fp=video_fp,
             clip_index=clip_index,
@@ -239,6 +300,8 @@ def _process_clip_task(
                 clip_plain_for_caption,
                 target_language,
                 hook=moment.get("hook") or None,
+                category=moment.get("category") or None,
+                topic=moment.get("topic") or None,
             )
         except BaseException as e:
             cap_error[0] = e
@@ -265,6 +328,8 @@ def _process_clip_task(
             opacidade,
             hook_phrase=moment.get("hook") or None,
             target_language=target_language,
+            cta_text=moment.get("cta"),
+            outro_text=outro_text,
             use_gpu_encoder=use_gpu,
         )
 
@@ -345,6 +410,9 @@ def _prepare_transcription_and_moments(
     video_name: str,
     target_language: str,
     progress_local: Callable[[float], None] | None = None,
+    manual_start: float | None = None,
+    manual_end: float | None = None,
+    hook_text: str | None = None,
 ) -> tuple[str, list[dict], list[dict], dict]:
     raise_if_cancelled()
     audio_path = str(TEMP_DIR / f"{video_name}.mp3")
@@ -373,19 +441,139 @@ def _prepare_transcription_and_moments(
         _log.info("[cache] Transcrição já existente — a saltar extração e transcrição.")
         _safe_progress(progress_local, 0.48)
 
-        _log.info("[3/5] A analisar os melhores momentos virais (Groq)…")
+    if (manual_start is None) != (manual_end is None):
+        raise ValueError("Preencha manual_start e manual_end juntos para um corte manual.")
+    if manual_start is not None and manual_end is not None:
+        start = float(manual_start)
+        end = float(manual_end)
+        if not math.isfinite(start) or not math.isfinite(end) or start < 0 or end <= start:
+            raise ValueError("A faixa manual precisa ter segundos finitos, com end maior que start.")
+        if end - start < 4.0:
+            raise ValueError("O corte manual precisa ter pelo menos 4 segundos.")
+        transcript_end = max(
+            (float(segment.get("end") or 0.0) for segment in segments),
+            default=end,
+        )
+        if start >= transcript_end:
+            raise ValueError(
+                f"manual_start ({start:.3f}s) está além do fim da transcrição ({transcript_end:.3f}s)."
+            )
+        end = min(end, transcript_end)
+        if end - start < 4.0:
+            raise ValueError("A faixa manual ficou curta após limitar ao fim da transcrição.")
+        moment = {
+            "start": round(start, 3),
+            "end": round(end, 3),
+            "reason": "Trecho escolhido manualmente pelo editor.",
+            "hook": (hook_text or "").strip(),
+            "cta": "",
+            "category": "controversy_opinion",
+            "topic": "palhetada e riff de metal",
+            "entities": [],
+            "viral_score": 10.0,
+            "hook_strength": 10.0,
+            "standalone_clarity": 10.0,
+            "controversy": 9.0,
+            "comment_potential": 10.0,
+            "ending_payoff": 8.0,
+        }
+        cache_hits["_selection"] = {
+            "profile": "manual",
+            "performance_profile_used": False,
+            "manual_start": moment["start"],
+            "manual_end": moment["end"],
+            "candidates_considered": [moment],
+        }
+        _safe_progress(progress_local, 0.58)
+        _log.info(
+            "[3/5] Faixa manual selecionada: %.3fs–%.3fs (%.1fs).",
+            moment["start"],
+            moment["end"],
+            moment["end"] - moment["start"],
+        )
+        return video_fp, segments, [moment], cache_hits
+
+    _log.info("[3/5] A analisar os melhores momentos virais (Groq)…")
     _safe_progress(progress_local, 0.5)
-    moments_opts = {"output_language": target_language}
-    moments = load_cached_moments(video_fp, moments_opts=moments_opts)
-    if moments is None:
+    try:
+        performance_profile = load_content_performance_profile()
+    except Exception as exc:
+        _log.warning("Perfil histórico indisponível; seguindo sem ele: %s", exc)
+        performance_profile = None
+    # Feedback loop de retenção: o growth profile sugere a duração-alvo dos clipes,
+    # a menos que a pessoa tenha fixado CLIP_DURATION manualmente no ambiente.
+    target_clip_duration: float | None = None
+    if not CLIP_DURATION_EXPLICIT:
+        growth_rec = (load_growth_profile() or {}).get("recommended_clip_duration_sec")
+        if growth_rec:
+            target_clip_duration = float(growth_rec)
+            _log.info(
+                "[feedback-loop] Duração-alvo de %.0fs vinda do growth profile.",
+                target_clip_duration,
+            )
+    moments_opts = {
+        "analyzer_version": VIRAL_ANALYZER_VERSION,
+        "output_language": target_language,
+        "selection_profile": VIRAL_SELECTION_PROFILE,
+        "candidate_count": max(VIRAL_CLIPS_COUNT, VIRAL_CANDIDATE_COUNT),
+        "performance_profile_key": (
+            performance_profile.cache_key if performance_profile is not None else None
+        ),
+        "target_clip_duration": target_clip_duration,
+    }
+    cached_analysis = load_cached_moment_analysis(video_fp, moments_opts=moments_opts)
+    selection_candidates: list[dict] | None = None
+    if cached_analysis is not None:
+        moments = cached_analysis["selected"]
+        selection_candidates = cached_analysis["candidates"]
+        cache_hits["moments"] = True
+        _log.info("[cache] Ranking viral e candidatos já existentes — a saltar análise.")
+    else:
+        # O namespace legado continua sendo escrito para compatibilidade, mas a versão do
+        # analisador invalida listas produzidas antes do ranking ponderado.
+        moments = load_cached_moments(video_fp, moments_opts=moments_opts)
+    if cached_analysis is None and moments is None:
         raise_if_cancelled()
-        moments = analyze_viral_moments(segments, output_language=target_language)
+        analysis = analyze_viral_moments(
+            segments,
+            output_language=target_language,
+            selection_profile=VIRAL_SELECTION_PROFILE,
+            performance_profile=performance_profile,
+            return_metadata=True,
+            target_clip_duration=target_clip_duration,
+        )
+        if isinstance(analysis, ViralAnalysisResult):
+            moments = analysis.selected
+            selection_candidates = analysis.candidates
+        else:
+            # Compatibilidade com implementações/test doubles antigos que retornam uma lista.
+            moments = analysis
+            selection_candidates = list(analysis)
         _log.info("[3/5] Análise viral concluída (%s momento(s)) — a gravar em cache.", len(moments))
+        save_cached_moment_analysis(
+            video_fp,
+            selected=moments,
+            candidates=selection_candidates or moments,
+            moments_opts=moments_opts,
+        )
+        # Mantém também o formato legado para outros processos/versões que só conhecem listas.
         save_cached_moments(video_fp, moments, moments_opts=moments_opts)
         _safe_progress(progress_local, 0.58)
-    else:
+    elif cached_analysis is None:
         cache_hits["moments"] = True
-        _log.info("[cache] Momentos virais já existentes — a saltar análise.")
+        selection_candidates = list(moments)
+        _log.info("[cache] Momentos virais legados já existentes — a saltar análise.")
+    if selection_candidates is None:
+        selection_candidates = list(moments)
+    cache_hits["_selection"] = {
+        "profile": VIRAL_SELECTION_PROFILE,
+        "performance_profile_used": performance_profile is not None,
+        "performance_profile_key": (
+            performance_profile.cache_key if performance_profile is not None else None
+        ),
+        "candidates_considered": selection_candidates,
+    }
+    if cached_analysis is not None:
         _safe_progress(progress_local, 0.58)
 
     return video_fp, segments, moments, cache_hits
@@ -409,6 +597,7 @@ def _run_clip_stage(
     tts_voice: str | None,
     progress_local: Callable[[float], None] | None = None,
     source_attribution: VideoSourceAttribution | None = None,
+    outro_text: str | None = None,
 ) -> list[str]:
     raise_if_cancelled()
     n = len(moments)
@@ -437,6 +626,7 @@ def _run_clip_stage(
             "opacidade": opacidade,
             "dub_to": dub_to,
             "tts_voice": tts_voice,
+            "outro_text": outro_text,
         }
         manifest = _write_run_manifest(
             video_path=video_path,
@@ -478,6 +668,7 @@ def _run_clip_stage(
                 opacidade,
                 dub_to,
                 tts_voice,
+                outro_text,
                 source_attribution,
                 precomputed_se,
             )
@@ -504,6 +695,7 @@ def _run_clip_stage(
         "opacidade": opacidade,
         "dub_to": dub_to,
         "tts_voice": tts_voice,
+        "outro_text": outro_text,
     }
     manifest = _write_run_manifest(
         video_path=video_path,
@@ -532,6 +724,10 @@ def _run_single_pipeline(
     tts_voice: str | None = None,
     progress_local: Callable[[float], None] | None = None,
     source_by_path: dict[str, VideoSourceAttribution] | None = None,
+    manual_start: float | None = None,
+    manual_end: float | None = None,
+    hook_text: str | None = None,
+    outro_text: str | None = None,
 ) -> list[str]:
     raise_if_cancelled()
     video_name = (video_name_override or Path(video_path).stem).strip() or Path(video_path).stem
@@ -542,6 +738,9 @@ def _run_single_pipeline(
         video_name,
         target_language,
         progress_local=progress_local,
+        manual_start=manual_start,
+        manual_end=manual_end,
+        hook_text=hook_text,
     )
     source_attribution = lookup_source_attribution(video_path, source_by_path)
     return _run_clip_stage(
@@ -561,10 +760,54 @@ def _run_single_pipeline(
         tts_voice=tts_voice,
         progress_local=progress_local,
         source_attribution=source_attribution,
+        outro_text=outro_text,
     )
 
 
-def run_pipeline(
+def _expand_long_video_inputs(
+    video_paths: list[str],
+    source_by_path: dict[str, VideoSourceAttribution] | None,
+) -> tuple[list[str], dict[str, VideoSourceAttribution] | None, Path | None]:
+    """Expande cada fonte longa em blocos completos antes da preparação do pipeline."""
+    chunk_root = TEMP_DIR / f"_long_video_chunks_{uuid.uuid4().hex[:12]}"
+    expanded_paths: list[str] = []
+    expanded_sources: dict[str, VideoSourceAttribution] = {}
+    was_split = False
+
+    try:
+        for source_index, video in enumerate(video_paths, start=1):
+            raise_if_cancelled()
+            result = split_video_into_chunks(
+                video,
+                chunk_root / f"source_{source_index:03d}",
+            )
+            if result.was_split:
+                was_split = True
+                remainder_min = result.discarded_remainder_sec / 60.0
+                _log.info(
+                    "Vídeo longo (%.1f min): dividido em %s bloco(s) de 20 min; "
+                    "%.1f min restantes descartados.",
+                    result.source_duration_sec / 60.0,
+                    len(result.paths),
+                    remainder_min,
+                )
+            expanded_paths.extend(result.paths)
+
+            attribution = lookup_source_attribution(video, source_by_path)
+            if attribution:
+                for path in result.paths:
+                    expanded_sources[str(Path(path).resolve())] = attribution
+    except Exception:
+        cleanup_split_directory(chunk_root)
+        raise
+
+    if not was_split:
+        cleanup_split_directory(chunk_root)
+
+    return expanded_paths, (expanded_sources or None), (chunk_root if was_split else None)
+
+
+def _run_pipeline_expanded(
     video_path: str | list[str] | tuple[str, ...],
     target_language: str = "pt",
     posicao: str = "bottom",
@@ -576,6 +819,10 @@ def run_pipeline(
     tts_voice: str | None = None,
     progress: Callable[[float], None] | None = None,
     source_by_path: dict[str, VideoSourceAttribution] | None = None,
+    manual_start: float | None = None,
+    manual_end: float | None = None,
+    hook_text: str | None = None,
+    outro_text: str | None = None,
 ) -> list[str]:
     """
     Aceita 1 vídeo (str) ou uma lista/tupla de vídeos.
@@ -585,18 +832,22 @@ def run_pipeline(
 
     source_by_path: mapa caminho absoluto do vídeo → metadados do canal (ex.: após yt-dlp).
     """
-    reset_cancel()
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    TEMP_DIR.mkdir(parents=True, exist_ok=True)
     if isinstance(video_path, (list, tuple)):
         videos = [str(v).strip() for v in video_path if str(v).strip()]
         if not videos:
             return []
 
         out: list[str] = []
-        used_names: dict[str, int] = {}
         total = len(videos)
         prep_future: Future | None = None
+        used_names: dict[str, int] = {}
+        video_names: list[str] = []
+        for vp in videos:
+            stem = Path(vp).stem
+            count = used_names.get(stem, 0) + 1
+            used_names[stem] = count
+            suffix = f"__{count}" if count > 1 else ""
+            video_names.append(f"{stem}{suffix}")
 
         def _scoped_progress(video_index: int) -> Callable[[float], None]:
             def scope_local(t: float) -> None:
@@ -606,11 +857,7 @@ def run_pipeline(
 
         with ThreadPoolExecutor(max_workers=2) as prep_pool:
             for i, vp in enumerate(videos):
-                stem = Path(vp).stem
-                count = used_names.get(stem, 0) + 1
-                used_names[stem] = count
-                suffix = f"__{count}" if count > 1 else ""
-                video_name_override = f"{stem}{suffix}"
+                video_name_override = video_names[i]
 
                 _log.info(
                     "Fila: vídeo %s de %s — %s",
@@ -619,51 +866,65 @@ def run_pipeline(
                     vp,
                 )
 
-                if prep_future is None:
-                    video_fp, segments, moments, cache_hits = _prepare_transcription_and_moments(
-                        vp,
-                        video_name_override,
-                        target_language,
-                        progress_local=_scoped_progress(i),
-                    )
-                else:
-                    video_fp, segments, moments, cache_hits = prep_future.result()
+                try:
+                    if prep_future is None:
+                        video_fp, segments, moments, cache_hits = _prepare_transcription_and_moments(
+                            vp,
+                            video_name_override,
+                            target_language,
+                            progress_local=_scoped_progress(i),
+                            manual_start=manual_start,
+                            manual_end=manual_end,
+                            hook_text=hook_text,
+                        )
+                    else:
+                        video_fp, segments, moments, cache_hits = prep_future.result()
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"Falha ao preparar o vídeo/bloco {i + 1}/{total}: {vp}\n{exc}"
+                    ) from exc
 
                 if i + 1 < len(videos):
                     vp_next = videos[i + 1]
-                    stem_n = Path(vp_next).stem
-                    c_next = used_names.get(stem_n, 0) + 1
-                    name_next = f"{stem_n}" + (f"__{c_next}" if c_next > 1 else "")
                     prep_future = prep_pool.submit(
                         _prepare_transcription_and_moments,
                         vp_next,
-                        name_next,
+                        video_names[i + 1],
                         target_language,
                         _scoped_progress(i + 1),
+                        manual_start,
+                        manual_end,
+                        hook_text,
                     )
                 else:
                     prep_future = None
 
-                out.extend(
-                    _run_clip_stage(
-                        vp,
-                        video_name_override,
-                        video_fp,
-                        segments,
-                        moments,
-                        cache_hits,
-                        target_language=target_language,
-                        posicao=posicao,
-                        fonte=fonte,
-                        cor_letra=cor_letra,
-                        cor_fundo=cor_fundo,
-                        opacidade=opacidade,
-                        dub_to=dub_to,
-                        tts_voice=tts_voice,
-                        progress_local=_scoped_progress(i),
-                        source_attribution=lookup_source_attribution(vp, source_by_path),
+                try:
+                    out.extend(
+                        _run_clip_stage(
+                            vp,
+                            video_name_override,
+                            video_fp,
+                            segments,
+                            moments,
+                            cache_hits,
+                            target_language=target_language,
+                            posicao=posicao,
+                            fonte=fonte,
+                            cor_letra=cor_letra,
+                            cor_fundo=cor_fundo,
+                            opacidade=opacidade,
+                            dub_to=dub_to,
+                            tts_voice=tts_voice,
+                            progress_local=_scoped_progress(i),
+                            source_attribution=lookup_source_attribution(vp, source_by_path),
+                            outro_text=outro_text,
+                        )
                     )
-                )
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"Falha ao gerar os cortes do vídeo/bloco {i + 1}/{total}: {vp}\n{exc}"
+                    ) from exc
         return out
 
     return _run_single_pipeline(
@@ -679,4 +940,73 @@ def run_pipeline(
         tts_voice=tts_voice,
         progress_local=progress,
         source_by_path=source_by_path,
+        manual_start=manual_start,
+        manual_end=manual_end,
+        hook_text=hook_text,
+        outro_text=outro_text,
     )
+
+
+def run_pipeline(
+    video_path: str | list[str] | tuple[str, ...],
+    target_language: str = "pt",
+    posicao: str = "bottom",
+    fonte: str = "Arial",
+    cor_letra: str = "#FFFF00",
+    cor_fundo: str = "#000000",
+    opacidade: int = 75,
+    dub_to: str | None = None,
+    tts_voice: str | None = None,
+    progress: Callable[[float], None] | None = None,
+    source_by_path: dict[str, VideoSourceAttribution] | None = None,
+    manual_start: float | None = None,
+    manual_end: float | None = None,
+    hook_text: str | None = None,
+    outro_text: str | None = None,
+) -> list[str]:
+    """Executa o pipeline, particionando fontes acima de 20 minutos primeiro."""
+    reset_cancel()
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    TEMP_DIR.mkdir(parents=True, exist_ok=True)
+
+    is_sequence = isinstance(video_path, (list, tuple))
+    if is_sequence:
+        input_paths = [str(v).strip() for v in video_path if str(v).strip()]
+    else:
+        input_paths = [str(video_path).strip()]
+    if not input_paths:
+        return []
+
+    expanded_paths: list[str] = []
+    expanded_sources: dict[str, VideoSourceAttribution] | None = None
+    chunk_root: Path | None = None
+    try:
+        expanded_paths, expanded_sources, chunk_root = _expand_long_video_inputs(
+            input_paths,
+            source_by_path,
+        )
+        pipeline_input: str | list[str]
+        if is_sequence or len(expanded_paths) != 1:
+            pipeline_input = expanded_paths
+        else:
+            pipeline_input = expanded_paths[0]
+        return _run_pipeline_expanded(
+            video_path=pipeline_input,
+            target_language=target_language,
+            posicao=posicao,
+            fonte=fonte,
+            cor_letra=cor_letra,
+            cor_fundo=cor_fundo,
+            opacidade=opacidade,
+            dub_to=dub_to,
+            tts_voice=tts_voice,
+            progress=progress,
+            source_by_path=expanded_sources,
+            manual_start=manual_start,
+            manual_end=manual_end,
+            hook_text=hook_text,
+            outro_text=outro_text,
+        )
+    finally:
+        if chunk_root is not None:
+            cleanup_split_directory(chunk_root)

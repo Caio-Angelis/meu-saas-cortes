@@ -62,6 +62,32 @@ def save_cached_moments(video_fp: str, moments: list[dict], *, moments_opts: dic
     write_json(p, moments)
 
 
+def load_cached_moment_analysis(video_fp: str, *, moments_opts: dict) -> dict | None:
+    """Carrega seleção + candidatos sem invalidar o cache legado de listas simples."""
+    key = key_hash("moment_analysis", video_fp, moments_opts)
+    p = cache_path("moment_analysis", key)
+    data = read_json(p)
+    if not isinstance(data, dict):
+        return None
+    selected = data.get("selected")
+    candidates = data.get("candidates")
+    if not isinstance(selected, list) or not isinstance(candidates, list):
+        return None
+    return {"selected": selected, "candidates": candidates}
+
+
+def save_cached_moment_analysis(
+    video_fp: str,
+    *,
+    selected: list[dict],
+    candidates: list[dict],
+    moments_opts: dict,
+) -> None:
+    key = key_hash("moment_analysis", video_fp, moments_opts)
+    p = cache_path("moment_analysis", key)
+    write_json(p, {"selected": selected, "candidates": candidates})
+
+
 def _segments_compact(segments: list[dict]) -> list[tuple[float, float, str]]:
     # Arredondar em 3 casas alinha chaves de cache entre módulos que montam os mesmos segmentos.
     return [

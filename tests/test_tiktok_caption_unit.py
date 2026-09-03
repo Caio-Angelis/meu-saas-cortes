@@ -38,25 +38,25 @@ def test_content_hashtags_from_transcript() -> None:
     assert not any("plotwist" in t for t in tags)
 
 
-def test_finalize_tiktok_hashtags_inserts_fyp_fy_and_five_total() -> None:
+def test_finalize_tiktok_hashtags_uses_content_tags_without_fyp_reservation() -> None:
     out = tc._finalize_tiktok_hashtags(["#humor", "#futebol", "#cinema"], "pt")
-    assert out[:2] == ["#fyp", "#fy"]
-    assert len(out) == 5
+    assert out[:3] == ["#humor", "#futebol", "#cinema"]
+    assert 3 <= len(out) <= 5
+    assert not {"#fyp", "#fy"} & set(out)
     assert "#humor" in out
 
 
-def test_finalize_tiktok_hashtags_strips_duplicate_discovery_tags() -> None:
+def test_finalize_tiktok_hashtags_filters_generic_discovery_tags() -> None:
     out = tc._finalize_tiktok_hashtags(["#FYP", "#fy", "#sóisso"], "pt")
-    assert out[:2] == ["#fyp", "#fy"]
+    assert not any(tag.casefold() in {"#fyp", "#fy"} for tag in out)
     assert any(t.lower() == "#sóisso" for t in out)
     assert "#FYP" not in out
 
 
 def test_finalize_tiktok_hashtags_fills_from_transcript_when_empty() -> None:
     out = tc._finalize_tiktok_hashtags([], "en", transcript="Football championship final goal")
-    assert out[:2] == ["#fyp", "#fy"]
-    assert len(out) >= 3
-    assert any("football" in t.lower() or "championship" in t.lower() or "final" in t.lower() for t in out[2:])
+    assert 3 <= len(out) <= 5
+    assert any("football" in t.lower() or "championship" in t.lower() or "final" in t.lower() for t in out)
 
 
 def test_fallback_caption_pt() -> None:
@@ -82,7 +82,7 @@ def test_append_source_attribution_pt() -> None:
         language="pt",
     )
     assert "Review original: Peewee" in out
-    assert "https://www.youtube.com/@peewee" in out
+    assert "https://www.youtube.com/@peewee" not in out
     assert out.startswith("Gancho viral")
 
 
@@ -96,3 +96,13 @@ def test_save_tiktok_caption_file(tmp_path: Path) -> None:
     path = tc.save_tiktok_caption_file(str(mp4), "hello\n")
     assert path.endswith(".txt")
     assert Path(path).read_text(encoding="utf-8") == "hello\n"
+
+
+def test_save_tiktok_caption_file_removes_links(tmp_path: Path) -> None:
+    mp4 = tmp_path / "clip.mp4"
+    mp4.write_bytes(b"")
+    path = tc.save_tiktok_caption_file(
+        str(mp4),
+        "Legenda do corte\nCanal: https://www.youtube.com/@canal\n#fyp #cinema",
+    )
+    assert Path(path).read_text(encoding="utf-8") == "Legenda do corte\n#fyp #cinema\n"

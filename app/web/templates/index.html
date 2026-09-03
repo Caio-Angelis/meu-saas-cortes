@@ -98,6 +98,65 @@
           </label>
         </section>
 
+        <section class="rounded-xl border border-surface-border bg-surface-card p-5 space-y-4">
+          <div>
+            <h2 class="text-sm font-medium uppercase tracking-wider text-accent">Edição editorial</h2>
+            <p class="text-xs text-slate-500 mt-1">Preencha os segundos para fixar um trecho; vazio mantém a seleção automática.</p>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label for="clip-start" class="block text-sm text-slate-300 mb-1">Início (segundos)</label>
+              <input
+                id="clip-start"
+                name="clip_start"
+                type="number"
+                min="0"
+                step="0.001"
+                placeholder="ex.: 13.5"
+                class="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
+              />
+            </div>
+            <div>
+              <label for="clip-end" class="block text-sm text-slate-300 mb-1">Fim (segundos)</label>
+              <input
+                id="clip-end"
+                name="clip_end"
+                type="number"
+                min="0"
+                step="0.001"
+                placeholder="ex.: 49.8"
+                class="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label for="hook-text" class="block text-sm text-slate-300 mb-1">Texto inicial (visível nos 3 primeiros segundos)</label>
+            <input
+              id="hook-text"
+              name="hook_text"
+              type="text"
+              value="Ele acabou de irritar metade dos guitarristas…"
+              maxlength="180"
+              class="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent/50"
+            />
+          </div>
+
+          <div>
+            <label for="outro-text" class="block text-sm text-slate-300 mb-1">Tela final / comentário próprio</label>
+            <textarea
+              id="outro-text"
+              name="outro_text"
+              rows="4"
+              maxlength="640"
+              class="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
+            >Minha leitura: o ataque muda o groove — não existe uma única palhetada “certa”.
+
+Concorda com ele? Comenta e segue o Bendify para mais discussões sobre guitarra.</textarea>
+          </div>
+        </section>
+
         <section class="rounded-xl border border-surface-border bg-surface-card p-5 space-y-3">
           <div class="flex justify-between text-sm">
             <span id="progress-label" class="text-slate-400">Aguardando…</span>

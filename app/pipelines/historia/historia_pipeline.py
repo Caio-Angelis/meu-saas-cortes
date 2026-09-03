@@ -15,23 +15,24 @@ from pathlib import Path
 from typing import TypedDict
 
 from app.ai_integrations.groq_chat import groq_user_message_text
-from app.pipelines.historia.comfyui_client import gerar_video_comfyui
 from app.core.config import (
     EDGE_TTS_VOICE_PT,
     FFMPEG_PATH,
+    GROQ_CHAT_MODEL,
     OUTPUT_DIR,
     OUTPUT_VIDEO_HEIGHT,
     OUTPUT_VIDEO_WIDTH,
     TEMP_DIR,
     gpu_clip_encoder_ffmpeg_args,
 )
+from app.pipelines.historia.comfyui_client import gerar_video_comfyui
 from app.tts.tts_engine import synthesize_speech_to_path
 
 _log = logging.getLogger("historia_pipeline")
 
 HISTORIAS_DIR: Path = OUTPUT_DIR / "historias"
 
-HISTORIA_LLM_MODEL = "llama-3.3-70b-versatile"
+HISTORIA_LLM_MODEL = GROQ_CHAT_MODEL
 HISTORIA_LLM_TEMPERATURE = 0.35
 HISTORIA_MAX_VIDEOS = 5
 

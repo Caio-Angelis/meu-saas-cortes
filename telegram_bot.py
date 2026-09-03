@@ -1,5 +1,5 @@
 """
-Bot Telegram para acionar pipelines no PC local (cortes virais e quiz).
+Bot Telegram para acionar os geradores no PC local.
 
 Requisitos: `TELEGRAM_BOT_TOKEN` e `TELEGRAM_ALLOWED_USER_ID` no `.env` (via `app.core.config`).
 
@@ -8,6 +8,10 @@ Execute na raiz do projeto:
 """
 
 from __future__ import annotations
+
+import sys
+
+sys.dont_write_bytecode = True
 
 import _venv_reexec
 
@@ -26,12 +30,12 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 _ROOT = Path(__file__).resolve().parent
 os.chdir(_ROOT)
 
-from telegram import Update
+from telegram import BotCommand, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from app.core.config import (
@@ -42,7 +46,13 @@ from app.core.config import (
     TEMP_DIR,
 )
 from app.core.logging_setup import setup_logging
+from app.pipelines.batalha.batalha_pipeline import (
+    BATALHA_MODOS,
+    normalize_batalha_modo,
+    run_batalha_pipeline,
+)
 from app.pipelines.cortes.pipeline import run_pipeline
+from app.pipelines.historia.historia_pipeline import run_historia_pipeline
 import app.pipelines.quiz.quiz_pipeline as quiz_pipeline_mod
 from app.pipelines.quiz.quiz_pipeline import (
     DEFAULT_QUESTION_COUNT,
@@ -56,7 +66,10 @@ from app.download.ytdlp_download import (
     download_video,
     normalize_media_url,
     resolve_ytdlp_executable,
+    search_youtube_top_by_views,
 )
+from app.tts.tts_standalone import synthesize_tts_mp3
+from app.tts.tts_voices import default_voice_id
 _log = logging.getLogger(__name__)
 
 TELEGRAM_MAX_VIDEO_BYTES = 50 * 1024 * 1024
@@ -66,7 +79,7 @@ _LOG_POLL_INTERVAL_SEC = 2.0
 _HEARTBEAT_INTERVAL_SEC = 75.0
 
 _HELP_TEXT = """\
-🤖 Bot — Cortes Virais + Máquina de Quizzes
+🤖 Bot — Geradores de vídeo
 
 Comandos:
 
@@ -85,11 +98,24 @@ https://www.youtube.com/watch?v=...
 Vários links ou arquivos: um por linha.
 Ao terminar, cada MP4 é enviado com a legenda TikTok (.txt) recomendada.
 
+/tema <assunto>
+Busca no YouTube o vídeo longo mais visto sobre o assunto e gera cortes.
+Ex.: /tema curiosidades sobre o espaço
+
 /quiz <tema> [quantidade] [timer_sec]
 Gera um vídeo quiz vertical.
 Ex.: /quiz Geografia 2 3
 
 Padrões quiz: {default_count} perguntas, timer {default_timer} s.
+
+/batalha [tamanho|territorio|plinko] <tema>
+Gera um duelo 1v1. Ex.: /batalha plinko Batman vs Superman
+
+/historia <texto>
+Gera um vídeo narrado com cenas IA. Requer o ComfyUI aberto.
+
+/tts <texto>
+Converte o texto em MP3 usando a voz padrão configurada.
 
 ⚠️ Apenas o usuário autorizado neste PC pode usar o bot.
 Os renders podem levar vários minutos — mantenha o terminal aberto.
@@ -137,10 +163,18 @@ def _caption_for_mp4(mp4: Path) -> str:
     return _read_caption_txt(mp4.with_suffix(".txt"))
 
 
+def _command_body(text: str, command: str) -> str:
+    return re.sub(
+        rf"^/{re.escape(command)}(?:@\w+)?(?:\s+|$)",
+        "",
+        (text or "").strip(),
+        count=1,
+        flags=re.IGNORECASE,
+    ).strip()
+
+
 def _parse_quiz_args(text: str) -> tuple[str, int, float] | str:
-    body = (text or "").strip()
-    if body.lower().startswith("/quiz"):
-        body = body[5:].strip()
+    body = _command_body(text, "quiz")
     if not body:
         return "Informe o tema. Ex.: /quiz Geografia 5 5"
 
@@ -175,9 +209,7 @@ def _parse_quiz_args(text: str) -> tuple[str, int, float] | str:
 
 
 def _parse_cortes_args(text: str) -> tuple[list[str], list[str]] | str:
-    body = (text or "").strip()
-    if body.lower().startswith("/cortes"):
-        body = body[7:].strip()
+    body = _command_body(text, "cortes")
 
     if not body:
         return (
@@ -230,6 +262,20 @@ def _parse_cortes_args(text: str) -> tuple[list[str], list[str]] | str:
         return f"Arquivo não encontrado: {missing[0]}"
 
     return locals_, urls
+
+
+def _parse_batalha_args(text: str) -> tuple[str, str] | str:
+    body = _command_body(text, "batalha")
+    if not body:
+        return "Informe o tema. Ex.: /batalha plinko Batman vs Superman"
+
+    first, *rest = body.split(maxsplit=1)
+    modo = normalize_batalha_modo(first)
+    if first.lower() in (*BATALHA_MODOS, "agar", "size", "territory", "race", "corrida"):
+        if not rest:
+            return "Informe o tema depois do modo. Ex.: /batalha plinko Batman vs Superman"
+        return rest[0], modo
+    return body, normalize_batalha_modo(None)
 
 
 @contextmanager
@@ -321,10 +367,19 @@ def _run_cortes_in_thread(
     urls: list[str],
     log_queue: queue.Queue[Any],
     progress_cb: Any | None = None,
+    search_theme: str = "",
 ) -> list[str]:
     """Espelha `gui._run_cortes_job_payload` (download + run_pipeline)."""
     videos: list[str] = list(local_paths)
     source_by_path: dict[str, VideoSourceAttribution] = {}
+
+    if search_theme:
+        log_queue.put_nowait(f"Buscando «{search_theme}» no YouTube…")
+        hit = search_youtube_top_by_views(search_theme)
+        urls = [hit.url]
+        log_queue.put_nowait(
+            f"Escolhido: {hit.title} · {hit.view_count:,} views · {hit.duration_sec / 60:.0f} min"
+        )
 
     if urls:
         n_u = len(urls)
@@ -486,6 +541,61 @@ async def _send_videos_with_captions(
     return sent, skipped
 
 
+async def _run_single_output_job(
+    message: Any,
+    context: ContextTypes.DEFAULT_TYPE,
+    *,
+    label: str,
+    header: str,
+    worker: Callable[[queue.Queue[Any]], str | Path],
+    audio: bool = False,
+) -> None:
+    if _job_lock.locked():
+        await message.reply_text(_BUSY_TEXT)
+        return
+
+    async with _job_lock:
+        status = await message.reply_text(header)
+        log_queue: queue.Queue[Any] = queue.Queue()
+        stop_poll = asyncio.Event()
+        poll_task = asyncio.create_task(
+            _poll_log_queue_to_status(log_queue, status, header=header, stop_event=stop_poll)
+        )
+        try:
+            output = Path(await asyncio.to_thread(worker, log_queue))
+        except Exception as e:
+            _log.exception("Falha em %s via Telegram", label)
+            await _report_error(status, message, label, e)
+            return
+        finally:
+            stop_poll.set()
+            poll_task.cancel()
+            try:
+                await poll_task
+            except asyncio.CancelledError:
+                pass
+
+        if not audio:
+            await _send_videos_with_captions(
+                context, message.chat_id, [output], status_message=status, job_label=label
+            )
+            return
+
+        if not output.is_file() or output.stat().st_size > TELEGRAM_MAX_VIDEO_BYTES:
+            await status.edit_text(f"📁 {label} concluído: {output.resolve()}")
+            return
+        await status.edit_text(f"✅ {label} concluído. Enviando MP3…")
+        try:
+            with output.open("rb") as audio_file:
+                await context.bot.send_audio(chat_id=message.chat_id, audio=audio_file)
+        except Exception as e:
+            await status.edit_text(
+                f"⚠️ {label} concluído, mas o envio falhou: {e}\n{output.resolve()}"
+            )
+        else:
+            await status.edit_text(f"🏁 {label}: MP3 enviado.")
+
+
 async def _require_authorized_message(
     update: Update,
 ) -> Any | None:
@@ -573,12 +683,20 @@ async def cmd_cortes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     if message is None:
         return
 
-    parsed = _parse_cortes_args(message.text or "")
-    if isinstance(parsed, str):
-        await message.reply_text(parsed)
-        return
-
-    local_paths, urls = parsed
+    text = message.text or ""
+    is_theme = bool(re.match(r"^/tema(?:@\w+)?(?:\s+|$)", text.strip(), re.IGNORECASE))
+    search_theme = _command_body(text, "tema") if is_theme else ""
+    if is_theme:
+        if not search_theme:
+            await message.reply_text("Informe o tema. Ex.: /tema curiosidades sobre o espaço")
+            return
+        local_paths, urls = [], []
+    else:
+        parsed = _parse_cortes_args(text)
+        if isinstance(parsed, str):
+            await message.reply_text(parsed)
+            return
+        local_paths, urls = parsed
 
     if _job_lock.locked():
         await message.reply_text(_BUSY_TEXT)
@@ -587,9 +705,10 @@ async def cmd_cortes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     n_local = len(local_paths)
     n_url = len(urls)
     async with _job_lock:
+        source = f"tema «{search_theme}»" if search_theme else f"{n_local} arquivo(s), {n_url} URL(s)"
         header = (
-            f"⏳ Cortes virais — {n_local} arquivo(s), {n_url} URL(s)\n"
-            "Transcrição + clipes podem levar vários minutos. Progresso abaixo."
+            f"⏳ Cortes virais — {source}\n"
+            "Download + transcrição + clipes podem levar vários minutos. Progresso abaixo."
         )
         status = await message.reply_text(header)
         log_queue: queue.Queue[Any] = queue.Queue()
@@ -619,6 +738,7 @@ async def cmd_cortes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
                 urls,
                 log_queue,
                 _cortes_progress,
+                search_theme,
             )
         except Exception as e:
             _log.exception("Falha nos cortes via Telegram")
@@ -643,6 +763,80 @@ async def cmd_cortes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             status_message=status,
             job_label="Cortes virais",
         )
+
+
+async def cmd_batalha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = await _require_authorized_message(update)
+    if message is None:
+        return
+    parsed = _parse_batalha_args(message.text or "")
+    if isinstance(parsed, str):
+        await message.reply_text(parsed)
+        return
+    theme, modo = parsed
+
+    def worker(log_queue: queue.Queue[Any]) -> Path:
+        return run_batalha_pipeline(
+            theme,
+            modo=modo,
+            tts_voice=default_voice_id(),
+            log_queue=log_queue,
+        ).video_path
+
+    await _run_single_output_job(
+        message,
+        context,
+        label=f"Batalha «{theme}»",
+        header=f"⏳ Batalha «{theme}» — modo {modo}. Pode levar vários minutos.",
+        worker=worker,
+    )
+
+
+async def cmd_historia(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = await _require_authorized_message(update)
+    if message is None:
+        return
+    story = _command_body(message.text or "", "historia")
+    if not story:
+        await message.reply_text(
+            "Informe o texto. Ex.: /historia Era uma vez uma cidade sem memórias..."
+        )
+        return
+
+    def worker(log_queue: queue.Queue[Any]) -> Path:
+        log_queue.put_nowait("Groq → cenas → TTS + ComfyUI → FFmpeg…")
+        return run_historia_pipeline(story, voice=default_voice_id()).video_path
+
+    await _run_single_output_job(
+        message,
+        context,
+        label="História",
+        header="⏳ História — gerando cenas e narração. Mantenha o ComfyUI aberto.",
+        worker=worker,
+    )
+
+
+async def cmd_tts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = await _require_authorized_message(update)
+    if message is None:
+        return
+    content = _command_body(message.text or "", "tts")
+    if not content:
+        await message.reply_text("Informe o texto. Ex.: /tts Texto da locução")
+        return
+
+    def worker(log_queue: queue.Queue[Any]) -> str:
+        log_queue.put_nowait("Sintetizando locução com a voz padrão…")
+        return synthesize_tts_mp3(content, default_voice_id())
+
+    await _run_single_output_job(
+        message,
+        context,
+        label="Text-to-Speech",
+        header="⏳ Text-to-Speech — gerando MP3…",
+        worker=worker,
+        audio=True,
+    )
 
 
 async def on_unauthorized_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -675,15 +869,33 @@ def _validate_config() -> None:
         )
 
 
+async def _register_commands(application: Application) -> None:
+    await application.bot.set_my_commands(
+        [
+            BotCommand("cortes", "Gerar cortes de URLs ou arquivos locais"),
+            BotCommand("tema", "Buscar um tema no YouTube e gerar cortes"),
+            BotCommand("quiz", "Gerar vídeo quiz"),
+            BotCommand("batalha", "Gerar batalha 1v1"),
+            BotCommand("historia", "Gerar história narrada com cenas IA"),
+            BotCommand("tts", "Converter texto em MP3"),
+            BotCommand("help", "Mostrar exemplos de todos os comandos"),
+        ]
+    )
+
+
 def main() -> None:
     setup_logging(gui_quiet=True)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     _validate_config()
 
-    app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    app = Application.builder().token(TELEGRAM_BOT_TOKEN).post_init(_register_commands).build()
 
     app.add_handler(CommandHandler(["start", "help"], cmd_start))
     app.add_handler(CommandHandler("quiz", cmd_quiz))
-    app.add_handler(CommandHandler("cortes", cmd_cortes))
+    app.add_handler(CommandHandler(["cortes", "tema"], cmd_cortes))
+    app.add_handler(CommandHandler("batalha", cmd_batalha))
+    app.add_handler(CommandHandler("historia", cmd_historia))
+    app.add_handler(CommandHandler("tts", cmd_tts))
     app.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, on_unauthorized_message),
     )

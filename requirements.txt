@@ -17,3 +17,6 @@ rq>=2.0.0
 python-telegram-bot>=21.0
 pymunk>=7.0.0
 duckduckgo-search>=7.0.0
+google-api-python-client>=2.0.0
+google-auth-oauthlib>=1.0.0
+google-auth-httplib2>=0.2.0

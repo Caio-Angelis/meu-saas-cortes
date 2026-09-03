@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
+from app.download.ytdlp_download import collect_urls_from_lines
 from app.web.hub import ProgressHub
 from app.web.pipeline_form import pipeline_kwargs_from_form
 from app.web.queue_backend import enqueue_playlist_batch, enqueue_playlist_item, redis_available
 from app.web.schemas import JobCreatedResponse
 from app.web.store import get_store
 from app.web.worker import save_uploaded_file
-from app.download.ytdlp_download import collect_urls_from_lines
 
 router = APIRouter(tags=["jobs"])
 
@@ -28,6 +28,10 @@ async def create_job(
     dub_pt: bool = Form(False),
     tts_voice: str = Form(""),
     export_zip: bool = Form(False),
+    hook_text: str = Form(""),
+    outro_text: str = Form(""),
+    clip_start: str = Form(""),
+    clip_end: str = Form(""),
     use_playlist: bool = Form(False),
     files: list[UploadFile] = File(default=[]),
 ) -> JobCreatedResponse:
@@ -56,18 +60,25 @@ async def create_job(
             continue
         local_paths.append(save_uploaded_file(data, uf.filename))
 
-    pipeline_kwargs = pipeline_kwargs_from_form(
-        lang=lang,
-        position=position,
-        font=font,
-        color=color,
-        bg_color=bg_color,
-        opacity=opacity,
-        dub_en=dub_en,
-        dub_pt=dub_pt,
-        tts_voice=tts_voice,
-        export_zip=export_zip,
-    )
+    try:
+        pipeline_kwargs = pipeline_kwargs_from_form(
+            lang=lang,
+            position=position,
+            font=font,
+            color=color,
+            bg_color=bg_color,
+            opacity=opacity,
+            dub_en=dub_en,
+            dub_pt=dub_pt,
+            tts_voice=tts_voice,
+            export_zip=export_zip,
+            hook_text=hook_text,
+            outro_text=outro_text,
+            clip_start=clip_start,
+            clip_end=clip_end,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     url_list = collect_urls_from_lines(urls)
     store = get_store()

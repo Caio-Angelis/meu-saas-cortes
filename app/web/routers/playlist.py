@@ -7,13 +7,13 @@ import asyncio
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
+from app.download.ytdlp_download import collect_urls_from_lines
 from app.web.hub import ProgressHub
 from app.web.pipeline_form import pipeline_kwargs_from_form
 from app.web.queue_backend import enqueue_playlist_batch, redis_available
 from app.web.schemas import PlaylistItemResponse, PlaylistListResponse, PlaylistProcessResponse
 from app.web.store import WORKFLOW_DISCARDED, WORKFLOW_PUBLISHED, get_store
 from app.web.worker import save_uploaded_file
-from app.download.ytdlp_download import collect_urls_from_lines
 
 router = APIRouter(tags=["playlist"])
 
@@ -62,6 +62,10 @@ async def add_to_playlist(
     dub_en: bool = Form(False),
     dub_pt: bool = Form(False),
     tts_voice: str = Form(""),
+    hook_text: str = Form(""),
+    outro_text: str = Form(""),
+    clip_start: str = Form(""),
+    clip_end: str = Form(""),
     files: list[UploadFile] = File(default=[]),
 ) -> PlaylistListResponse:
     if lang not in ("pt", "en"):
@@ -81,17 +85,24 @@ async def add_to_playlist(
     if not url_list and not local_paths:
         raise HTTPException(status_code=400, detail="Informe URLs ou arquivos para a playlist.")
 
-    opts = pipeline_kwargs_from_form(
-        lang=lang,
-        position=position,
-        font=font,
-        color=color,
-        bg_color=bg_color,
-        opacity=opacity,
-        dub_en=dub_en,
-        dub_pt=dub_pt,
-        tts_voice=tts_voice,
-    )
+    try:
+        opts = pipeline_kwargs_from_form(
+            lang=lang,
+            position=position,
+            font=font,
+            color=color,
+            bg_color=bg_color,
+            opacity=opacity,
+            dub_en=dub_en,
+            dub_pt=dub_pt,
+            tts_voice=tts_voice,
+            hook_text=hook_text,
+            outro_text=outro_text,
+            clip_start=clip_start,
+            clip_end=clip_end,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     store = get_store()
     created: list[int] = []

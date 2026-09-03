@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from app.ai_integrations.groq_chat import groq_user_message_text
+from app.core.caption_text import remove_links_from_caption
+from app.core.config import GROQ_FAST_MODEL
 
 if TYPE_CHECKING:
     from app.download.ytdlp_download import VideoSourceAttribution
@@ -13,9 +15,11 @@ if TYPE_CHECKING:
 _log = logging.getLogger("tiktok_caption")
 
 _CAPTION_MAX_WORDS = 15
-# Post: exatamente 5 hashtags — #fyp e #fy são fixas; a IA gera mais 3 ligadas ao conteúdo.
+# Post: de 3 a 5 hashtags ligadas ao conteúdo. Tags genéricas de viralização são descartadas.
 _LLM_CONTENT_HASHTAGS = 3
-_FIXED_FYP_TAGS = ("#fyp", "#fy")
+_MIN_HASHTAGS = 3
+_MAX_HASHTAGS = 5
+_FIXED_FYP_TAGS: tuple[str, ...] = ()  # símbolo legado; não reserva espaço no post
 
 _GENERIC_HASHTAG_WORDS = frozenset(
     {
@@ -92,7 +96,6 @@ _STOPWORDS = frozenset(
         "eles",
         "elas",
         "the",
-        "a",
         "an",
         "and",
         "or",
@@ -147,7 +150,6 @@ _STOPWORDS = frozenset(
         "have",
         "has",
         "had",
-        "do",
         "does",
         "did",
         "about",
@@ -193,6 +195,8 @@ def _build_caption_prompt(
     language: str,
     *,
     hook: str | None = None,
+    category: str | None = None,
+    topic: str | None = None,
 ) -> str:
     """TikTok *post description* (not burned-in subtitles)."""
     transcript = (clip_transcript or "").strip()
@@ -203,6 +207,8 @@ def _build_caption_prompt(
     hook_text = (hook or "").strip()
     if hook_text:
         hook_line = f"\nHook on-screen (same clip): {hook_text}\n"
+    category_line = f"\nCategoria do corte: {category}\n" if category else ""
+    topic_line = f"Tema detectado: {topic}\n" if topic else ""
 
     lang = (language or "pt").strip().lower()
     banned_tags = ", ".join(
@@ -235,11 +241,11 @@ def _build_caption_prompt(
             "\"POV:\", \"react\", \"ninguém tá falando disso\", \"assista até o fim\" — "
             "a menos que isso esteja literalmente no clipe.\n"
             "- Zero emojis.\n"
-            f"- `hashtags`: **exatamente {_LLM_CONTENT_HASHTAGS}**, todas sobre o ASSUNTO do clipe "
+            f"- `hashtags`: entre **{_MIN_HASHTAGS} e {_MAX_HASHTAGS}**, todas sobre o ASSUNTO do clipe "
             "(tema, nicho, pessoa/marca citada, esporte, filme, receita, etc.). "
             "Cada hashtag deve ser compreensível só lendo a transcrição.\n"
             f"- Proibido hashtags genéricas de viralização ou FYP: {banned_tags}.\n"
-            "- Não use #fyp, #fy, #foryou nem #foryoupage (o sistema adiciona #fyp e #fy depois).\n"
+            "- Não use #fyp, #fy, #foryou nem #foryoupage.\n"
             "- Hashtags começam com #, sem espaços, sem acentos se possível (ex.: #futebol, #cinema).\n\n"
             'Responda APENAS com JSON válido (sem markdown, sem ```):\n'
             '{"caption":"<frase sobre o conteúdo real>","hashtags":["#TemaDoClip","#Nicho","#Assunto"]}\n'
@@ -257,11 +263,11 @@ def _build_caption_prompt(
             "\"react\", \"nobody is talking about this\", \"watch till the end\" — "
             "unless that literally appears in the clip.\n"
             "- Zero emojis.\n"
-            f"- `hashtags`: **exactly {_LLM_CONTENT_HASHTAGS}**, all about the clip SUBJECT "
+            f"- `hashtags`: between **{_MIN_HASHTAGS} and {_MAX_HASHTAGS}**, all about the clip SUBJECT "
             "(topic, niche, person/brand mentioned, sport, movie, recipe, etc.). "
             "Each hashtag must make sense from the transcript alone.\n"
             f"- Forbidden generic viral/FYP tags: {banned_tags}.\n"
-            "- Do not use #fyp, #fy, #foryou, or #foryoupage (app adds #fyp and #fy later).\n"
+            "- Do not use #fyp, #fy, #foryou, or #foryoupage.\n"
             "- Hashtags start with #, no spaces.\n\n"
             "Respond with ONLY valid JSON (no markdown, no code fences):\n"
             '{"caption":"<line about actual content>","hashtags":["#ClipTopic","#Niche","#Subject"]}\n'
@@ -274,6 +280,8 @@ def _build_caption_prompt(
         f"{ctx_label}\n"
         f"{transcript}\n"
         f"{hook_line}"
+        f"{category_line}"
+        f"{topic_line}"
         "--- END ---\n\n"
         f"{rules}"
     )
@@ -308,6 +316,7 @@ def _normalize_hashtags(tags: list, *, max_tags: int | None = None) -> list[str]
         if not t.startswith("#"):
             t = "#" + t.lstrip("#")
         t = _strip_emojis(t)
+        t = "#" + re.sub(r"[^a-zA-ZÀ-ÿ0-9]", "", t.lstrip("#"))
         tag_word = re.sub(r"[^a-zA-Z0-9]", "", t.lstrip("#")).lower()
         if tag_word in _GENERIC_HASHTAG_WORDS:
             continue
@@ -324,9 +333,37 @@ def _content_hashtags_from_transcript(
     count: int = _LLM_CONTENT_HASHTAGS,
 ) -> list[str]:
     """Hashtags de fallback derivadas de palavras-chave da transcrição."""
-    words = re.findall(r"[a-zA-ZÀ-ÿ0-9]{4,}", (transcript or "").lower())
+    canonical_terms = (
+        ("guitarra", "#Guitarra"),
+        ("violão", "#Violao"),
+        ("violao", "#Violao"),
+        ("blues", "#Blues"),
+        ("rock", "#Rock"),
+        ("pentatônica", "#Pentatonica"),
+        ("pentatonica", "#Pentatonica"),
+        ("improvisação", "#Improvisacao"),
+        ("improvisacao", "#Improvisacao"),
+        ("acorde", "#Acordes"),
+        ("acordes", "#Acordes"),
+        ("escala", "#Escalas"),
+        ("escalas", "#Escalas"),
+        ("timbre", "#Timbre"),
+        ("riff", "#Riff"),
+        ("solo", "#Solo"),
+        ("composição", "#Composicao"),
+        ("composicao", "#Composicao"),
+        ("teoria musical", "#TeoriaMusical"),
+    )
+    lowered = (transcript or "").casefold()
     out: list[str] = []
     seen: set[str] = set()
+    for term, tag in canonical_terms:
+        if term in lowered and tag.casefold() not in seen:
+            out.append(tag)
+            seen.add(tag.casefold())
+            if len(out) >= count:
+                return out
+    words = re.findall(r"[a-zA-ZÀ-ÿ0-9]{4,}", (transcript or "").lower())
     for word in words:
         normalized = re.sub(r"[^a-z0-9]", "", word)
         if len(normalized) < 4:
@@ -348,28 +385,28 @@ def _finalize_tiktok_hashtags(
     *,
     transcript: str = "",
 ) -> list[str]:
-    """Sempre 5 tags: #fyp + #fy + até 3 ligadas ao conteúdo (sem duplicar as fixas)."""
-    fixed_lower = {t.lower() for t in _FIXED_FYP_TAGS}
+    """Mantém de 3 a 5 hashtags específicas, sem reservar espaço para FYP."""
+    del language
     content: list[str] = []
     seen: set[str] = set()
     for h in normalized:
         hl = h.lower()
-        if hl in fixed_lower or hl in seen:
+        tag_word = re.sub(r"[^a-zA-Z0-9]", "", h.lstrip("#")).lower()
+        if tag_word in _GENERIC_HASHTAG_WORDS or hl in seen:
             continue
         content.append(h)
         seen.add(hl)
-        if len(content) >= _LLM_CONTENT_HASHTAGS:
+        if len(content) >= _MAX_HASHTAGS:
             break
-    for b in _content_hashtags_from_transcript(transcript):
-        if len(content) >= _LLM_CONTENT_HASHTAGS:
+    for b in _content_hashtags_from_transcript(transcript, count=_MAX_HASHTAGS):
+        if len(content) >= _MAX_HASHTAGS:
             break
         bl = b.lower()
-        if bl in fixed_lower or bl in seen:
+        if bl in seen:
             continue
         content.append(b)
         seen.add(bl)
-    content = content[:_LLM_CONTENT_HASHTAGS]
-    return list(_FIXED_FYP_TAGS) + content
+    return content[:_MAX_HASHTAGS]
 
 
 def _fallback_caption(clip_transcript: str, language: str) -> str:
@@ -383,7 +420,7 @@ def _fallback_caption(clip_transcript: str, language: str) -> str:
         lang,
         transcript=transcript,
     )
-    return base + "\n" + " ".join(tags)
+    return base + ("\n" + " ".join(tags) if tags else "")
 
 
 def generate_tiktok_post_caption(
@@ -391,6 +428,8 @@ def generate_tiktok_post_caption(
     language: str = "pt",
     *,
     hook: str | None = None,
+    category: str | None = None,
+    topic: str | None = None,
 ) -> str:
     """
     Texto da caixa de descrição do post (TikTok) no mesmo idioma que `language` (pt ou en).
@@ -398,7 +437,13 @@ def generate_tiktok_post_caption(
     """
     lang = (language or "pt").strip().lower()
     transcript = (clip_transcript or "").strip()
-    prompt = _build_caption_prompt(transcript, lang, hook=hook)
+    prompt = _build_caption_prompt(
+        transcript,
+        lang,
+        hook=hook,
+        category=category,
+        topic=topic,
+    )
     try:
         llm_text = groq_user_message_text(
             prompt,
@@ -410,7 +455,7 @@ def generate_tiktok_post_caption(
             rate_limit_message=(
                 "Groq rate limit excedido ao gerar legenda de postagem. Tente novamente."
             ),
-            model="llama-3.1-8b-instant",
+            model=GROQ_FAST_MODEL,
         )
         content = llm_text or ""
         obj_txt = _extract_json_object(content)
@@ -481,9 +526,6 @@ def append_source_attribution_to_caption(
     base = (caption_text or "").strip()
     lines = [base] if base else []
     lines.append(_source_attribution_line(channel, language))
-    channel_url = (attribution.channel_url or "").strip()
-    if channel_url:
-        lines.append(channel_url)
     return "\n".join(lines).strip() + "\n"
 
 
@@ -491,5 +533,6 @@ def save_tiktok_caption_file(video_path: str, caption_text: str) -> str:
     """Salva legenda ao lado do .mp4 com o mesmo nome base e extensão .txt"""
     p = Path(video_path)
     out = p.with_suffix(".txt")
-    out.write_text(caption_text.strip() + "\n", encoding="utf-8")
+    clean_caption = remove_links_from_caption(caption_text)
+    out.write_text(clean_caption + "\n", encoding="utf-8")
     return str(out)

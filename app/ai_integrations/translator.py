@@ -9,6 +9,16 @@ from app.core.limits import translate_limiter, translate_retry_policy, with_retr
 
 # Delimitador pouco provável em falas; se aparecer no texto, caímos no fallback por segmento.
 _BATCH_SEP = "\x1e"
+_TRANSLATION_ERROR_MARKERS = (
+    "error 500",
+    "server error",
+    "there was an error",
+    "please try again later",
+    "erro 500",
+    "erro do servidor",
+    "servidor falhou",
+    "tente novamente mais tarde",
+)
 
 
 @lru_cache(maxsize=64)
@@ -43,7 +53,10 @@ def _translate_text_cached(text: str, *, source: str, target: str) -> str:
 
     try:
         out = with_retries(_do, policy=translate_retry_policy, should_retry=_retryable)
-        return str(out).strip()
+        clean_out = str(out).strip()
+        if any(marker in clean_out.casefold() for marker in _TRANSLATION_ERROR_MARKERS):
+            return clean
+        return clean_out
     except Exception:
         return text
 
@@ -125,7 +138,19 @@ def translate_segments(
         blob = translate_text(payload, source, target)
         parts = blob.split(_BATCH_SEP)
 
-        if len(parts) != len(batch):
+        unchanged_batch = (
+            source == "auto"
+            and target.casefold() in {"pt", "en"}
+            and len(parts) == len(batch)
+            and all(
+                parts[idx].strip().casefold() == texts[idx].strip().casefold()
+                for idx in range(len(batch))
+            )
+        )
+        if len(parts) != len(batch) or unchanged_batch:
+            # Algumas respostas HTTP 500 do tradutor chegam como texto válido e
+            # passam pelo separador intactas; uma tentativa por segmento evita
+            # transformar a mensagem de erro em legenda persistida.
             for i in batch:
                 txt = translate_text(segments[i].get("text", ""), source, target)
                 out[i] = {**segments[i], "text": txt}

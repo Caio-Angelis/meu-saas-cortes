@@ -8,6 +8,8 @@ import pytest
 from app.video_processing.subtitle_burner import (
     _build_split_vstack_graph,
     _prepare_scale_crop_overlay_vf,
+    burn_subtitles,
+    cut_and_burn_subtitles,
 )
 
 
@@ -160,3 +162,52 @@ def test_prepare_dynamic_returns_vf_chain(monkeypatch: pytest.MonkeyPatch, tmp_p
     assert vf.startswith("scale=")
     assert "vstack" not in vf
     assert "if(lt(t" in vf
+
+
+def test_prepare_explicit_empty_cta_does_not_add_generic_follow_prompt(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    import app.video_processing.subtitle_burner as sb
+
+    monkeypatch.setattr(sb, "SMART_CROP_ENABLED", False)
+    srt = tmp_path / "no_cta.srt"
+    _write_minimal_srt(srt)
+    vid = tmp_path / "no_cta.mp4"
+    vid.write_bytes(b"x")
+
+    vf, _ass, _hook, _cta, _is_fc = _prepare_scale_crop_overlay_vf(
+        str(vid), str(srt), "bottom", "Arial", "#FFFF00", "#000000", 75, None, "pt", cta_text=""
+    )
+
+    assert "follow_cta" not in vf
+
+
+@pytest.mark.parametrize("render", [burn_subtitles, cut_and_burn_subtitles])
+def test_split_uses_nvenc(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, render) -> None:
+    import app.video_processing.subtitle_burner as sb
+
+    ass = tmp_path / "clip.ass"
+    cta = tmp_path / "cta.txt"
+    ass.touch()
+    cta.touch()
+    monkeypatch.setattr(
+        sb,
+        "_prepare_scale_crop_overlay_vf",
+        lambda *_args, **_kwargs: ("[0:v]null[vout]", str(ass), None, cta, True),
+    )
+    monkeypatch.setattr(sb, "clip_gpu_uses_vaapi", lambda: False)
+    monkeypatch.setattr(
+        sb,
+        "gpu_clip_encoder_ffmpeg_args",
+        lambda: ["-c:v", "h264_nvenc"],
+    )
+    commands: list[list[str]] = []
+    monkeypatch.setattr(sb, "run_cancelable", lambda cmd, **_kwargs: commands.append(cmd))
+
+    common = ["input.mp4", "clip.srt", str(tmp_path / "out.mp4")]
+    if render is cut_and_burn_subtitles:
+        render("input.mp4", 0, 2, "clip.srt", str(tmp_path / "out.mp4"), use_gpu_encoder=True)
+    else:
+        render(*common, use_gpu_encoder=True)
+
+    assert commands[0][commands[0].index("-c:v") + 1] == "h264_nvenc"

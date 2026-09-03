@@ -11,6 +11,22 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+# Modelos de chat ativos no catálogo do Groq. O fallback mantém esses nomes em
+# um único lugar para que a aposentadoria de um modelo não quebre cada pipeline.
+GROQ_CHAT_MODEL: str = (
+    os.getenv("GROQ_CHAT_MODEL", "openai/gpt-oss-120b").strip()
+    or "openai/gpt-oss-120b"
+)
+GROQ_FAST_MODEL: str = (
+    os.getenv("GROQ_FAST_MODEL", "openai/gpt-oss-20b").strip()
+    or "openai/gpt-oss-20b"
+)
+# LLM local OpenAI-compatível (ex.: llama-server). Quando configurado, assume as
+# chamadas de chat (análise viral e legendas) com fallback automático para o Groq.
+LOCAL_LLM_BASE_URL: str = os.getenv("LOCAL_LLM_BASE_URL", "").strip().rstrip("/")
+LOCAL_LLM_API_KEY: str = os.getenv("LOCAL_LLM_API_KEY", "").strip()
+LOCAL_LLM_MODEL: str = os.getenv("LOCAL_LLM_MODEL", "").strip()
+LOCAL_LLM_TIMEOUT_SEC: float = float(os.getenv("LOCAL_LLM_TIMEOUT_SEC", "600"))
 # Gemini (TTS realista na aba Text-to-Speech — vozes como Achernar, Leda)
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 GEMINI_TTS_MODEL: str = os.getenv("GEMINI_TTS_MODEL", "gemini-2.5-flash-preview-tts")
@@ -47,9 +63,36 @@ TRANSLATE_BATCH: bool = os.getenv("TRANSLATE_BATCH", "1").strip().lower() in (
 TRANSLATE_BATCH_MAX_CHARS: int = max(512, int(os.getenv("TRANSLATE_BATCH_MAX_CHARS", "3800")))
 OUTPUT_DIR: Path = Path(os.getenv("OUTPUT_DIR", "resultados"))
 TEMP_DIR: Path = Path(os.getenv("TEMP_DIR", "temp"))
+SOURCE_HISTORY_DB: Path = Path(
+    os.getenv("SOURCE_HISTORY_DB", str(OUTPUT_DIR.parent / "data" / "source_history.sqlite"))
+)
 CLIP_DURATION: int = int(os.getenv("CLIP_DURATION", "50"))
+# True quando a pessoa fixou a duração manualmente; o feedback loop só sugere outra se não.
+CLIP_DURATION_EXPLICIT: bool = bool(os.getenv("CLIP_DURATION", "").strip())
+GROWTH_PROFILE_PATH: Path = Path(
+    os.getenv("GROWTH_PROFILE_PATH", str(OUTPUT_DIR.parent / "data" / "growth_profile.json"))
+)
 VIRAL_CLIPS_COUNT: int = int(os.getenv("VIRAL_CLIPS_COUNT", "5"))
 CLIP_SPEED_UP_PERCENT: float = float(os.getenv("CLIP_SPEED_UP_PERCENT", "2"))
+
+# Seleção viral: crescimento no TikTok é o comportamento indicado; balanced continua disponível
+# para instalações que precisam reproduzir o ranking mais neutro.
+VIRAL_SELECTION_PROFILE: str = (
+    os.getenv("VIRAL_SELECTION_PROFILE", "tiktok_growth").strip().lower() or "tiktok_growth"
+)
+try:
+    _viral_candidate_count = int(os.getenv("VIRAL_CANDIDATE_COUNT", "12"))
+except ValueError:
+    _viral_candidate_count = 12
+VIRAL_CANDIDATE_COUNT: int = max(VIRAL_CLIPS_COUNT, min(20, max(10, _viral_candidate_count)))
+_performance_report_raw = (
+    os.getenv("TIKTOK_PERFORMANCE_REPORT_PATH")
+    or os.getenv("VIRAL_PERFORMANCE_REPORT_PATH")
+    or ""
+).strip()
+TIKTOK_PERFORMANCE_REPORT_PATH: Path | None = (
+    Path(_performance_report_raw).expanduser() if _performance_report_raw else None
+)
 
 # Saída vertical 9:16 (TikTok / Reels / Shorts)
 OUTPUT_VIDEO_WIDTH: int = int(os.getenv("OUTPUT_VIDEO_WIDTH", "1080"))
@@ -258,7 +301,8 @@ def pipeline_thread_pool_max_workers() -> int:
         return max(1, int(raw))
     cpus = os.cpu_count() or 8
     denom = max(0.5, PIPELINE_CPU_PER_CLIP_ESTIMATE)
-    return max(1, int(cpus * PIPELINE_CPU_FRACTION / denom))
+    cpu_workers = max(1, int(cpus * PIPELINE_CPU_FRACTION / denom))
+    return max(cpu_workers, CLIP_ENCODE_PARALLEL_GPU) if USE_GPU_CLIP_ENCODE else cpu_workers
 
 
 def clip_gpu_uses_vaapi() -> bool:
@@ -402,7 +446,7 @@ LOCAL_WHISPER_COMPUTE: str = os.getenv("LOCAL_WHISPER_COMPUTE", "float16").strip
 
 # Nome interno da fonte da legenda (deve bater com o "name" do TTF em assets/fonts/)
 TIKTOK_SUBTITLE_FONT: str = os.getenv("TIKTOK_SUBTITLE_FONT", "Montserrat").strip()
-FONTS_DIR: str = str((Path(__file__).resolve().parents[2] / "assets" / "fonts"))
+FONTS_DIR: str = str(Path(__file__).resolve().parents[2] / "assets" / "fonts")
 
 # Legenda karaokê (palavra a palavra). 1 = ligado.
 SUBTITLE_KARAOKE: bool = os.getenv("SUBTITLE_KARAOKE", "1").strip().lower() in ("1","true","yes","on")
@@ -417,6 +461,11 @@ VISUAL_GRADE: bool = os.getenv("VISUAL_GRADE", "1").strip().lower() in ("1","tru
 VISUAL_PROGRESS_BAR: bool = os.getenv("VISUAL_PROGRESS_BAR", "1").strip().lower() in ("1","true","yes","on")
 VISUAL_PROGRESS_COLOR: str = os.getenv("VISUAL_PROGRESS_COLOR", "yellow").strip()
 VISUAL_WATERMARK_TEXT: str = os.getenv("VISUAL_WATERMARK_TEXT", "").strip()  # ex.: "@seuperfil"
+# Tela final editorial opcional, adicionada depois do trecho principal.
+OUTRO_CARD_DURATION_SEC: float = max(
+    1.5,
+    min(8.0, float(os.getenv("OUTRO_CARD_DURATION_SEC", "4.0"))),
+)
 
 # Página de upload do TikTok Studio (GUI: botão "Postar no TikTok").
 TIKTOK_UPLOAD_URL: str = os.getenv(

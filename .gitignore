@@ -4,8 +4,16 @@
 !.env.example
 *.cookies.txt
 **/cookies.txt
+*.cookie
+cookies/
 www.youtube.com_cookies.txt
 youtube_cookies.txt
+client_secret*.json
+client_secrets*.json
+client-secrets*.json
+token.json
+token_*.json
+youtube_oauth_token.json
 
 # ── Arquivos do usuário (conteúdo privado) ──────────
 links.txt
@@ -15,7 +23,12 @@ links.txt
 temp/
 resultados/
 legendas/
+.media/
+videos/
+entrega_*/
 data/
+*_report_*.csv
+*_report_*.json
 *.mp4
 *.mp3
 *.wav
@@ -34,6 +47,7 @@ data/
 # Frames/dumps de verificação (fora de assets/)
 check_*.png
 *_frame*.png
+!assets/
 !assets/**
 
 # ── Bancos locais (web/store) ───────────────────────

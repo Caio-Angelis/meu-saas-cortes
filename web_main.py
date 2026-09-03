@@ -9,6 +9,10 @@ Execute na raiz do projeto:
 
 from __future__ import annotations
 
+import sys
+
+sys.dont_write_bytecode = True
+
 import _venv_reexec
 
 _venv_reexec.ensure_venv(__file__)

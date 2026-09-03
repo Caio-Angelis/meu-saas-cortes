@@ -14,8 +14,8 @@ import re
 import subprocess
 import time
 import unicodedata
-from datetime import datetime
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from queue import Queue
 from threading import Event
@@ -30,9 +30,9 @@ from app.core.cancel import raise_if_cancelled
 from app.core.clip_output_naming import sanitize_clip_output_stem
 from app.core.config import (
     EDGE_TTS_MAX_CONCURRENT,
-    EDGE_TTS_RETRIES,
     EDGE_TTS_VOICE_PT,
     FFMPEG_PATH,
+    GROQ_CHAT_MODEL,
     OUTPUT_DIR,
     OUTPUT_VIDEO_HEIGHT,
     OUTPUT_VIDEO_WIDTH,
@@ -44,6 +44,7 @@ from app.core.config import (
     ffmpeg_vaapi_vf_hwupload_suffix,
     gpu_clip_encoder_ffmpeg_args,
 )
+from app.core.subprocess_utils import run_cancelable
 from app.gui.gui_export import ffprobe_duration_seconds
 from app.pipelines.quiz.quiz_frames import (
     _resolve_font_path,
@@ -53,10 +54,10 @@ from app.pipelines.quiz.quiz_frames import (
     render_quiz_outro_frame,
     render_quiz_reward_frame,
 )
-from app.core.subprocess_utils import run_cancelable
 from app.tts.tts_engine import synthesize_speech_to_path
-from app.video_processing.tts_dubber import edge_tts_save_to_path
 from app.tts.tts_voices import resolve_voice
+from app.video_processing.tts_dubber import edge_tts_save_to_path
+
 _log = logging.getLogger("quiz_pipeline")
 
 # --- Limites de layout (projeto.md §13.3.2 / §13.3.7) ---
@@ -116,7 +117,7 @@ REWARD_SEGMENT_SEC = 1.0
 REWARD_SFX_TRIM_SEC = 0.35
 REWARD_MESSAGES = ("Acertou? 🎉", "Errou? 😅")
 
-QUIZ_LLM_MODEL = "llama-3.3-70b-versatile"
+QUIZ_LLM_MODEL = GROQ_CHAT_MODEL
 QUIZ_GENERATION_TEMPERATURE = 0.2
 QUIZ_VERIFY_TEMPERATURE = 0.05
 QUIZ_VERIFY_MAX_ATTEMPTS = 2

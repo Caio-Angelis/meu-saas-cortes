@@ -1,4 +1,7 @@
 import argparse
+import sys
+
+sys.dont_write_bytecode = True
 
 import _venv_reexec
 
@@ -14,7 +17,7 @@ from app.pipelines.cortes.pipeline import run_pipeline
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        description="SaaS de Cortes Virais — gera 5 clipes virais a partir de um vídeo longo."
+        description="SaaS de Cortes Virais — gera 5 clipes por bloco de 20 minutos."
     )
     p.add_argument(
         "video",

@@ -85,6 +85,10 @@
     fd.append("urls", urls);
     fd.append("lang", document.getElementById("lang").value);
     fd.append("position", document.getElementById("position").value);
+    fd.append("hook_text", document.getElementById("hook-text").value);
+    fd.append("outro_text", document.getElementById("outro-text").value);
+    fd.append("clip_start", document.getElementById("clip-start").value);
+    fd.append("clip_end", document.getElementById("clip-end").value);
     if (dubEn.checked) fd.append("dub_en", "true");
     if (dubPt.checked) fd.append("dub_pt", "true");
     if (document.getElementById("export-zip").checked) fd.append("export_zip", "true");
