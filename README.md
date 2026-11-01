@@ -17,13 +17,13 @@ multi-tenancy, cobrança ou backend remoto próprio.
 | História | texto e voz | história narrada com cenas geradas pelo ComfyUI |
 | Text-to-Speech | texto e voz | MP3 com Kokoro, Gemini ou Edge-TTS |
 | Analytics | CSV/JSON de desempenho | recomendações editoriais e perfil de crescimento |
-| YouTube | 5 pares MP4/TXT | uploads privados agendados pela API oficial |
+| YouTube | lote de 5 pares ou upload individual/encadeado na API local | publicação pela API oficial |
 
 Interfaces disponíveis:
 
-- GUI desktop em Tkinter — experiência principal e acesso a todos os fluxos;
+- Web UI local em FastAPI — experiência principal e acesso aos workspaces do studio;
+- GUI desktop legada em Tkinter — mantida apenas para compatibilidade com instalações antigas;
 - CLI — processamento rápido de Cortes Virais;
-- web local em FastAPI — Cortes Virais com playlist persistida;
 - bot privado do Telegram — execução remota no PC local.
 
 ## Destaques
@@ -81,15 +81,17 @@ entre instalações do sistema.
 
 ## Como executar
 
-### GUI — recomendada
+### Web UI — recomendada
 
 ```bash
-.venv/bin/python gui.py
+.venv/bin/python web_main.py
 ```
 
-A GUI Cortes Lab — Creative Automation Studio possui workspaces para Cortes Virais, Quiz, Batalha,
-História, TTS, publicação no YouTube e análise de desempenho. Jobs longos rodam em background, com log,
-progresso, cancelamento cooperativo, exportação ZIP e ações para copiar legendas.
+Abra http://127.0.0.1:8765/. O Cortes Lab — Creative Automation Studio possui workspaces para Cortes
+Virais, Quiz, Batalha, História, TTS, publicação no YouTube e análise de desempenho. Jobs longos rodam
+em background, com logs, progresso em tempo real, playlist persistida e saídas clicáveis.
+
+Se um atalho antigo ainda executar `gui.py`, ele delega automaticamente para a Web UI.
 
 ### CLI — Cortes Virais
 
@@ -118,15 +120,6 @@ progresso, cancelamento cooperativo, exportação ZIP e ações para copiar lege
 | --opacity | 75 | 0–100 |
 | --dub-en / --dub-pt | desligado | apenas uma por vez |
 | --tts-voice | vazio | voz selecionada |
-
-### Web local
-
-```bash
-.venv/bin/python web_main.py
-```
-
-Abra http://127.0.0.1:8765/. A web permite enviar arquivos/URLs, adicionar itens à playlist, processar
-a fila e acompanhar o progresso por SSE/polling.
 
 Por padrão, os jobs rodam em uma thread no servidor. Para usar Redis + RQ:
 
@@ -252,12 +245,32 @@ O ComfyUI deve estar em http://127.0.0.1:8188, com:
 
 ## Publicação no YouTube
 
-A aba de publicação aceita exatamente 5 MP4 e 5 TXT correspondentes. Ela ordena os arquivos
-naturalmente, usa a primeira linha do TXT como título, limpa a descrição, autentica via OAuth e agenda
-uma publicação por dia, começando amanhã. Os vídeos ficam privados até o horário agendado.
+O endpoint legado `POST /api/publish/youtube` preserva o lote de exatamente 5 MP4 e 5 TXT, com agenda
+diária e envio privado. A rota de lote ainda aceita o JSON OAuth enviado pela interface antiga.
 
-Configure YOUTUBE_CLIENT_SECRETS_FILE ou selecione o JSON pela GUI. O token OAuth é salvo localmente em
-token.json e nunca deve ser commitado.
+Para vídeos com metadados explícitos, a API local oferece:
+
+- `GET /api/publish/youtube/channels` para consultar os canais do token que já existe;
+- `POST /api/publish/youtube/individual` para preparar um vídeo;
+- `POST /api/publish/youtube/sequence` para preparar vídeo longo e Short, nessa ordem;
+- `POST /api/publish/youtube/workflows/{id}/publish` com `{"confirm": true}` para enfileirar;
+- `GET /api/publish/youtube/workflows/{id}` para conferir IDs, visibilidade e estados;
+- `POST /api/publish/youtube/workflows/{id}/resume` para retomar somente etapas seguras e pendentes.
+
+Cada criação exige `Idempotency-Key`, canal-alvo explícito, título, descrição, visibilidade e declaração
+`contains_synthetic_media`. Os arquivos recebidos e o estado durável ficam em `data/youtube_workflow/uploads/` e
+`data/youtube_workflow/state.sqlite`; a mesma chave não inicia um segundo upload. O fluxo novo usa somente
+`token.json` já existente: não pede nem salva um novo consentimento OAuth, não recebe JSON de cliente, e
+bloqueia o envio se não conseguir confirmar o canal. Se o escopo atual não permitir consultar `channels.list`,
+o operador precisa resolver o acesso fora deste fluxo; o endpoint não amplia escopos automaticamente.
+
+O longo é enviado antes do Short. A API oficial de vídeos não possui campo para associar o Short ao vídeo
+relacionado. Depois dos dois uploads, selecione o longo em YouTube Studio → Conteúdo → Short → Vídeo
+relacionado → Salvar. A API local só marca essa associação depois que o operador confirma que verificou o
+vínculo no Studio; colocar uma URL na descrição não conta como associação.
+
+O endpoint de sequência sinaliza mídia sintética com `status.containsSyntheticMedia` quando declarado. O token
+OAuth fica local em `token.json` e nunca deve ser commitado.
 
 ## Analytics
 
@@ -273,7 +286,7 @@ quando CLIP_DURATION não foi fixado explicitamente.
 ```text
 .
 ├── main.py                         # CLI de Cortes Virais
-├── gui.py                          # GUI desktop e roteamento de jobs
+├── gui.py                          # atalho compatível que delega para a Web UI
 ├── web_main.py                     # servidor FastAPI
 ├── web_worker.py                   # worker RQ opcional
 ├── telegram_bot.py                 # bot privado Telegram

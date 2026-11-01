@@ -18,6 +18,7 @@ class RunItem(BaseModel):
     name: str
     path: str
     duration: str = "—"
+    url: str | None = None
 
 
 class RunsResponse(BaseModel):

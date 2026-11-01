@@ -11,9 +11,9 @@ de vídeos verticais para TikTok, Reels, Shorts e YouTube Shorts. O nome conceit
 **SaaS de Cortes Virais**; ele não é um SaaS hospedado: não há login, multi-tenancy, billing ou
 servidor remoto próprio. O programa roda na máquina do usuário e pode ser acessado por:
 
+- interface web local em FastAPI (`web_main.py`) — experiência principal;
+- GUI desktop legada em Tkinter (`gui.py`) — atalho de compatibilidade;
 - CLI (`main.py`);
-- GUI desktop em Tkinter (`gui.py`);
-- interface web local em FastAPI (`web_main.py`);
 - bot privado do Telegram (`telegram_bot.py`).
 
 O núcleo mais antigo e mais importante é o gerador de **Cortes Virais**: recebe vídeos locais ou
@@ -31,7 +31,7 @@ O mesmo executável agora também contém geradores de conteúdo independentes:
 | Text-to-Speech | texto e voz | MP3 | implementado |
 | Análise de desempenho | CSV de posts | três recomendações editoriais | implementado |
 | Loop de retenção | JSON exportado do TikTok | `growth_profile.json` | implementado |
-| Publicar no YouTube | cinco pares MP4/TXT | uploads privados agendados | implementado na GUI |
+| Publicar no YouTube | lote de cinco pares ou workflows locais individual/sequence | uploads oficiais | GUI legada e API web |
 
 Regras de produto que não devem ser perdidas:
 
@@ -179,15 +179,14 @@ Argumentos CLI atuais:
 | `--dub-pt` | desligado | mutuamente exclusivo com `--dub-en` |
 | `--tts-voice` | vazio | voz passada ao dublador quando aplicável |
 
-### Executar a GUI
+### Executar a Web UI
 
 ```bash
-.venv/bin/python gui.py
-# Windows: abrir_gui.bat
+.venv/bin/python web_main.py
 ```
 
-A janela se chama **Cortes Lab — Creative Automation Studio**. A ação principal da GUI é Cortes Virais;
-as ferramentas secundárias ficam na navegação lateral/abas.
+Abra **http://127.0.0.1:8765/** para acessar o **Cortes Lab — Creative Automation Studio**. O `gui.py`
+antigo continua aceitando o atalho legado e delega para o mesmo servidor web.
 
 ### Executar a interface web local
 
@@ -1018,8 +1017,11 @@ ficam liberadas para retry.
 - `app/web/worker.py`: download + `run_pipeline` + progresso;
 - `app/web/tasks.py`: funções enfileiradas;
 - `app/web/hub.py`: snapshot e fan-out SSE;
-- `app/web/templates/index.html`: formulário e tabelas;
-- `app/web/static/js/app.js`: fetch, SSE e polling.
+- `app/web/templates/index.html`: dashboard, workspaces e formulários;
+- `app/web/static/css/app.css`: design responsivo e tema claro/escuro;
+- `app/web/static/js/app.js`: navegação, fetch, SSE, playlist e estados de UI;
+- `app/web/studio_worker.py`: dispatcher web para quiz, batalha, história, TTS e YouTube;
+- `app/web/routers/analytics.py` e `app/web/routers/publish.py`: operações de analytics e publicação.
 
 ### Estados da playlist
 
@@ -1178,6 +1180,9 @@ Arquivos:
 
 - `app/publishing/youtube_schedule.py`;
 - `app/publishing/youtube_uploader.py`;
+- `app/publishing/youtube_workflow.py`;
+- `app/web/routers/publish.py`;
+- roteamento de jobs em `app/web/studio_worker.py`;
 - controles na aba “Publicar no YouTube” de `gui.py`.
 
 O fluxo exige exatamente 5 MP4 e 5 TXT com os mesmos nomes-base. Os vídeos são ordenados naturalmente
@@ -1208,6 +1213,28 @@ Metadados:
 Upload é resumível em chunks de 8 MB, sequencial, com retry para HTTP 500/502/503/504 e falhas de conexão.
 Isso publica no YouTube, ao contrário do fluxo TikTok, que continua manual.
 
+
+### API local para upload individual ou sequenciado
+
+A rota legada `POST /api/publish/youtube` continua exigindo os cinco pares MP4/TXT e agendamento privado.
+As rotas locais novas aceitam um MP4 com metadados explícitos (`POST /api/publish/youtube/individual`) ou
+um longo e um Short (`POST /api/publish/youtube/sequence`). Toda criação exige `Idempotency-Key`, canal
+exato, privacidade e `contains_synthetic_media`; a sequence sempre envia o longo primeiro. Arquivos e estado
+ficam em `data/youtube_workflow/uploads/` e `data/youtube_workflow/state.sqlite`, com SHA-256 e IDs retornados para evitar
+repetição acidental.
+
+O fluxo web só lê/renova em memória um `token.json` já existente; não inicia OAuth, não recebe credencial
+OAuth do cliente e não persiste credenciais renovadas. Antes do primeiro envio, `channels.list(mine=true)`
+precisa confirmar o canal de destino. Se o token não tiver permissão de leitura suficiente, a rota falha fechada;
+não adicionar escopos OAuth automaticamente. Cada envio grava primeiro o estado `uploading`; resultado incerto
+exige reconciliação pelo ID via API ou confirmação manual de ausência no Studio antes de retomar. Canal ou
+visibilidade divergente bloqueiam a próxima etapa.
+
+O recurso “vídeo relacionado” do Shorts não tem campo correspondente no recurso `videos` da Data API. A sequence
+termina em `awaiting_studio`; a associação precisa ser feita em YouTube Studio e só então confirmada pela rota
+`POST /api/publish/youtube/workflows/{id}/related-video/confirm`. Nunca tratar URL na descrição como o card
+relacionado. As rotas novas aceitam apenas conexões loopback.
+
 ## 18. Mapa de arquivos
 
 ### Raiz e entrypoints
@@ -1215,7 +1242,7 @@ Isso publica no YouTube, ao contrário do fluxo TikTok, que continua manual.
 | Caminho | Responsabilidade |
 |---|---|
 | `main.py` | CLI de Cortes |
-| `gui.py` | GUI Tkinter, abas, workers e ações de exportação/publicação |
+| `gui.py` | atalho legado que delega para a Web UI |
 | `web_main.py` | servidor FastAPI local |
 | `web_worker.py` | worker RQ externo |
 | `telegram_bot.py` | bot privado Telegram |
@@ -1509,7 +1536,8 @@ Os testes atuais cobrem principalmente:
 - catálogo TTS, Gemini parser e TTS standalone;
 - store web e estados de playlist;
 - parse de comandos Telegram;
-- seleção, metadata, OAuth mockado e upload YouTube mockado.
+- seleção, metadata, OAuth mockado e upload YouTube mockado;
+- workflows de upload YouTube: idempotência, canal-alvo, ordem longo/Short, estado incerto e confirmação manual do vídeo relacionado.
 
 Não cobrem de forma plena:
 

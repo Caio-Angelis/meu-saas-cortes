@@ -32,6 +32,7 @@ class YouTubeUploadResult:
     title: str
     privacy_status: str
     publish_at: str | None = None
+    channel_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -170,6 +171,109 @@ def _google_dependencies() -> tuple[object, object, object, object, object, obje
     return Credentials, Request, InstalledAppFlow, build, HttpError, (MediaFileUpload, httplib2)
 
 
+def get_existing_youtube_credentials(token_path: str | Path) -> object:
+    """Carrega e, se necessário, renova apenas um token já existente. Nunca abre OAuth."""
+    token = Path(token_path).expanduser().resolve()
+    if not token.is_file():
+        raise YouTubeUploadError("Token OAuth existente não encontrado; nenhum consentimento foi iniciado.")
+    Credentials, Request, _Flow, _build, _HttpError, _media = _google_dependencies()
+    try:
+        credentials = Credentials.from_authorized_user_file(
+            str(token), [YOUTUBE_UPLOAD_SCOPE]
+        )
+        if credentials.expired and credentials.refresh_token:
+            credentials.refresh(Request())
+        if not credentials.valid:
+            raise YouTubeUploadError("Token OAuth existente inválido ou expirado.")
+        return credentials
+    except YouTubeUploadError:
+        raise
+    except Exception as exc:
+        raise YouTubeUploadError("Não foi possível usar o token OAuth existente.") from exc
+
+
+def build_youtube_client(credentials: object) -> object:
+    """Cria o cliente oficial do YouTube sem iniciar autorização ou persistir tokens."""
+    _Credentials, _Request, _Flow, build, _HttpError, _media = _google_dependencies()
+    try:
+        return build("youtube", "v3", credentials=credentials, cache_discovery=False)
+    except Exception as exc:
+        raise YouTubeUploadError("Não foi possível inicializar o cliente do YouTube.") from exc
+
+
+def verify_youtube_channel(youtube: object, target_channel_id: str) -> dict[str, str]:
+    """Confirma que o token autenticado controla exatamente o canal solicitado."""
+    requested = str(target_channel_id or "").strip()
+    if not requested:
+        raise YouTubeUploadError("Informe o ID exato do canal do YouTube.")
+    try:
+        response = youtube.channels().list(part="id,snippet", mine=True).execute()  # type: ignore[attr-defined]
+    except Exception as exc:
+        raise YouTubeUploadError("Não foi possível verificar o canal autorizado pela API do YouTube.") from exc
+    channels = (response or {}).get("items") or []
+    match = next((item for item in channels if str(item.get("id") or "") == requested), None)
+    if match is None:
+        raise YouTubeUploadError("O canal autenticado não corresponde ao ID de destino.")
+    snippet = match.get("snippet") or {}
+    return {"channel_id": requested, "title": str(snippet.get("title") or "")}
+
+
+def verify_existing_youtube_video(
+    youtube: object,
+    *,
+    video_id: str,
+    target_channel_id: str,
+    expected_title: str,
+) -> dict[str, str]:
+    """Lê um vídeo existente e confere canal e título antes de reconciliar um upload."""
+    requested_id = str(video_id or "").strip()
+    if not requested_id:
+        raise YouTubeUploadError("Informe o ID do vídeo para reconciliação.")
+    try:
+        response = youtube.videos().list(part="snippet,status", id=requested_id).execute()  # type: ignore[attr-defined]
+    except Exception as exc:
+        raise YouTubeUploadError("Não foi possível verificar o vídeo pela API do YouTube.") from exc
+    items = (response or {}).get("items") or []
+    if not items:
+        raise YouTubeUploadError("A API do YouTube não encontrou esse vídeo.")
+    item = items[0]
+    snippet = item.get("snippet") or {}
+    status = item.get("status") or {}
+    channel_id = str(snippet.get("channelId") or "")
+    title = str(snippet.get("title") or "")
+    privacy = str(status.get("privacyStatus") or "unknown")
+    if channel_id != target_channel_id:
+        raise YouTubeUploadError("O vídeo informado pertence a outro canal.")
+    if title != expected_title:
+        raise YouTubeUploadError("O título do vídeo informado não corresponde ao item pendente.")
+    if privacy not in VALID_PRIVACY_STATUSES:
+        raise YouTubeUploadError("A API não retornou uma visibilidade verificável para o vídeo.")
+    return {
+        "video_id": requested_id,
+        "url": YOUTUBE_WATCH_URL.format(video_id=requested_id),
+        "channel_id": channel_id,
+        "title": title,
+        "privacy_status": privacy,
+    }
+
+
+def validate_explicit_video_metadata(title: str, description: str) -> tuple[str, str]:
+    """Valida metadados explícitos; rejeita caracteres inválidos sem reescrever o texto."""
+    clean_title = str(title or "").strip()
+    clean_description = str(description or "").strip()
+    if "<" in clean_title or ">" in clean_title or "<" in clean_description or ">" in clean_description:
+        raise YouTubeUploadError("Título e descrição não podem conter < ou >.")
+    if not clean_title:
+        raise YouTubeUploadError("O título não pode ficar vazio.")
+    if len(clean_title) > _TITLE_MAX_CHARS:
+        raise YouTubeUploadError(f"O título excede {_TITLE_MAX_CHARS} caracteres.")
+    if not clean_description:
+        raise YouTubeUploadError("A descrição não pode ficar vazia.")
+    if len(clean_description.encode("utf-8")) > _DESCRIPTION_MAX_BYTES:
+        raise YouTubeUploadError(f"A descrição excede {_DESCRIPTION_MAX_BYTES} bytes UTF-8.")
+    return clean_title, clean_description
+
+
 def _save_credentials(credentials: object, token_path: Path) -> None:
     token_path.parent.mkdir(parents=True, exist_ok=True)
     temp_path = token_path.with_suffix(token_path.suffix + ".tmp")
@@ -242,37 +346,59 @@ def _http_error_message(exc: BaseException) -> str:
 
 def upload_video_to_youtube(
     video_path: str | Path,
-    caption_path: str | Path,
+    caption_path: str | Path | None = None,
     *,
-    client_secrets_path: str | Path,
-    token_path: str | Path,
+    client_secrets_path: str | Path | None = None,
+    token_path: str | Path | None = None,
     privacy_status: str = "public",
     made_for_kids: bool = False,
     publish_at: str | None = None,
+    title: str | None = None,
+    description: str | None = None,
+    contains_synthetic_media: bool | None = None,
+    youtube_client: object | None = None,
     progress: Callable[[float], None] | None = None,
 ) -> YouTubeUploadResult:
-    """Autentica, envia o MP4 de forma resumível e retorna o link publicado."""
-    files = select_upload_files([str(video_path), str(caption_path)])
+    """Envia um MP4 pela API oficial, usando cliente/token existentes quando fornecidos."""
+    video = Path(video_path).expanduser().resolve()
+    if not video.is_file() or video.suffix.lower() != ".mp4":
+        raise YouTubeUploadError("O arquivo de vídeo precisa existir e terminar em .mp4.")
+    explicit_metadata = title is not None or description is not None
+    if explicit_metadata:
+        if title is None or description is None:
+            raise YouTubeUploadError("Título e descrição explícitos precisam ser enviados juntos.")
+        title, description = validate_explicit_video_metadata(title, description)
+        if caption_path is not None:
+            raise YouTubeUploadError("Use metadados explícitos ou um arquivo TXT, não ambos.")
+    else:
+        if caption_path is None:
+            raise YouTubeUploadError("Informe um TXT ou título e descrição explícitos.")
+        files = select_upload_files([str(video), str(caption_path)])
     privacy = (privacy_status or "").strip().lower()
     if privacy not in VALID_PRIVACY_STATUSES:
         raise YouTubeUploadError(f"Privacidade inválida: {privacy_status}")
-    try:
-        caption = files.caption_path.read_text(encoding="utf-8-sig")
-    except (OSError, UnicodeError) as exc:
-        raise YouTubeUploadError(f"Não foi possível ler a legenda TXT: {exc}") from exc
-    title, description = build_video_metadata(files.video_path, caption)
+    if not explicit_metadata:
+        try:
+            caption = files.caption_path.read_text(encoding="utf-8-sig")
+        except (OSError, UnicodeError) as exc:
+            raise YouTubeUploadError(f"Não foi possível ler a legenda TXT: {exc}") from exc
+        title, description = build_video_metadata(files.video_path, caption)
     scheduled_at = (publish_at or "").strip() or None
     if scheduled_at is not None:
         # Exigência da API: publishAt só pode ser definido enquanto o vídeo está privado.
         privacy = "private"
 
-    credentials = get_youtube_credentials(client_secrets_path, token_path)
-    _Credentials, _Request, _Flow, build, HttpError, media_deps = _google_dependencies()
+    if youtube_client is None:
+        if client_secrets_path is None or token_path is None:
+            raise YouTubeUploadError("Credenciais OAuth ausentes para o upload.")
+        credentials = get_youtube_credentials(client_secrets_path, token_path)
+        youtube_client = build_youtube_client(credentials)
+    _Credentials, _Request, _Flow, _build, HttpError, media_deps = _google_dependencies()
     MediaFileUpload, httplib2 = media_deps
     try:
-        youtube = build("youtube", "v3", credentials=credentials, cache_discovery=False)
+        youtube = youtube_client
         media = MediaFileUpload(
-            str(files.video_path), mimetype="video/mp4", chunksize=8 * 1024 * 1024, resumable=True
+            str(video), mimetype="video/mp4", chunksize=8 * 1024 * 1024, resumable=True
         )
         upload_status_body: dict[str, object] = {
             "privacyStatus": privacy,
@@ -280,6 +406,8 @@ def upload_video_to_youtube(
         }
         if scheduled_at is not None:
             upload_status_body["publishAt"] = scheduled_at
+        if contains_synthetic_media is not None:
+            upload_status_body["containsSyntheticMedia"] = bool(contains_synthetic_media)
         request = youtube.videos().insert(
             part="snippet,status",
             body={
@@ -322,8 +450,10 @@ def upload_video_to_youtube(
     if not video_id:
         raise YouTubeUploadError("O YouTube concluiu a requisição sem retornar o ID do vídeo.")
     response_status = (response or {}).get("status") or {}
-    actual_privacy = str(response_status.get("privacyStatus") or privacy)
+    actual_privacy = str(response_status.get("privacyStatus") or "unknown")
     actual_publish_at = str(response_status.get("publishAt") or scheduled_at or "").strip() or None
+    response_snippet = (response or {}).get("snippet") or {}
+    actual_channel_id = str(response_snippet.get("channelId") or "").strip() or None
     if progress is not None:
         progress(1.0)
     return YouTubeUploadResult(
@@ -332,4 +462,5 @@ def upload_video_to_youtube(
         title=title,
         privacy_status=actual_privacy,
         publish_at=actual_publish_at,
+        channel_id=actual_channel_id,
     )

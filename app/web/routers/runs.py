@@ -8,6 +8,7 @@ from fastapi import APIRouter
 
 from app.core.config import OUTPUT_DIR
 from app.gui.gui_export import ffprobe_duration_seconds, format_duration_hms
+from app.web.media import output_media_url
 from app.web.schemas import RunItem, RunsResponse
 
 router = APIRouter(tags=["runs"])
@@ -17,14 +18,21 @@ def _list_runs_sync(limit: int = 30) -> list[RunItem]:
     if not OUTPUT_DIR.is_dir():
         return []
     mp4s = sorted(
-        OUTPUT_DIR.glob("*.mp4"),
+        OUTPUT_DIR.rglob("*.mp4"),
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     )[:limit]
     items: list[RunItem] = []
     for p in mp4s:
         dur = format_duration_hms(ffprobe_duration_seconds(str(p)))
-        items.append(RunItem(name=p.name, path=str(p.resolve()), duration=dur))
+        items.append(
+            RunItem(
+                name=p.name,
+                path=str(p.resolve()),
+                duration=dur,
+                url=output_media_url(p),
+            )
+        )
     return items
 
 

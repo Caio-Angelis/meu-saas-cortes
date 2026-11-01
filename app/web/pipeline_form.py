@@ -49,6 +49,7 @@ def pipeline_kwargs_from_form(
     outro_text: str = "",
     clip_start: str | float | int | None = "",
     clip_end: str | float | int | None = "",
+    improvements: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     dub_to = None
     if dub_en:
@@ -70,6 +71,8 @@ def pipeline_kwargs_from_form(
         "manual_start": normalize_optional_float(clip_start, "clip_start"),
         "manual_end": normalize_optional_float(clip_end, "clip_end"),
     }
+    if improvements:
+        opts["_improvements"] = dict(improvements)
     start = opts["manual_start"]
     end = opts["manual_end"]
     if (start is None) != (end is None):

@@ -48,6 +48,7 @@ from app.core.config import (
     USE_GPU_CLIP_ENCODE,
     VIRAL_CANDIDATE_COUNT,
     VIRAL_CLIPS_COUNT,
+    VIRAL_EDITORIAL_FOCUS,
     VIRAL_SELECTION_PROFILE,
     pipeline_thread_pool_max_workers,
 )
@@ -515,6 +516,7 @@ def _prepare_transcription_and_moments(
         "analyzer_version": VIRAL_ANALYZER_VERSION,
         "output_language": target_language,
         "selection_profile": VIRAL_SELECTION_PROFILE,
+        "editorial_focus": VIRAL_EDITORIAL_FOCUS,
         "candidate_count": max(VIRAL_CLIPS_COUNT, VIRAL_CANDIDATE_COUNT),
         "performance_profile_key": (
             performance_profile.cache_key if performance_profile is not None else None

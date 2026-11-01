@@ -66,7 +66,15 @@ async def add_to_playlist(
     outro_text: str = Form(""),
     clip_start: str = Form(""),
     clip_end: str = Form(""),
-    files: list[UploadFile] = File(default=[]),
+    export_zip: bool = Form(False),
+    karaoke: bool = Form(False),
+    visual_grade: bool = Form(False),
+    visual_progress: bool = Form(False),
+    smart_crop: bool = Form(True),
+    gpu_encode: bool = Form(True),
+    prefer_local_tts: bool = Form(True),
+    watermark: str = Form(""),
+    files: list[UploadFile] = File(default=[]),  # noqa: B008
 ) -> PlaylistListResponse:
     if lang not in ("pt", "en"):
         raise HTTPException(status_code=400, detail="lang deve ser pt ou en.")
@@ -100,6 +108,16 @@ async def add_to_playlist(
             outro_text=outro_text,
             clip_start=clip_start,
             clip_end=clip_end,
+            export_zip=export_zip,
+            improvements={
+                "SUBTITLE_KARAOKE": karaoke,
+                "VISUAL_GRADE": visual_grade,
+                "VISUAL_PROGRESS_BAR": visual_progress,
+                "SMART_CROP_ENABLED": smart_crop,
+                "USE_GPU_CLIP_ENCODE": gpu_encode,
+                "LOCAL_TTS_PREFERRED": prefer_local_tts,
+                "VISUAL_WATERMARK_TEXT": watermark.strip(),
+            },
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

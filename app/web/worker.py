@@ -10,18 +10,43 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import DOWNLOAD_MAX_WORKERS, OUTPUT_DIR, TEMP_DIR
-from app.gui.gui_export import export_cortes_zip
 from app.core.logging_setup import gui_pipeline_log_redirect
-from app.pipelines.cortes.pipeline import run_pipeline
-from app.web.hub import ProgressHub
-from app.web.store import get_store
 from app.download.ytdlp_download import (
     VideoSourceAttribution,
     collect_urls_from_lines,
     download_video,
 )
+from app.gui.gui_export import export_cortes_zip
+from app.pipelines.cortes.pipeline import run_pipeline
+from app.web.hub import ProgressHub
+from app.web.media import output_media_urls
+from app.web.store import get_store
 
 _log = logging.getLogger("web.worker")
+
+
+def _apply_pipeline_improvements(pipeline_kwargs: dict[str, Any]) -> None:
+    """Aplica os toggles visuais da web antes de iniciar o pipeline."""
+    raw = pipeline_kwargs.pop("_improvements", None)
+    if not isinstance(raw, dict):
+        return
+    from app.core import config as cfg
+
+    cfg.SUBTITLE_KARAOKE = bool(raw.get("SUBTITLE_KARAOKE", cfg.SUBTITLE_KARAOKE))
+    cfg.VISUAL_GRADE = bool(raw.get("VISUAL_GRADE", cfg.VISUAL_GRADE))
+    cfg.VISUAL_PROGRESS_BAR = bool(
+        raw.get("VISUAL_PROGRESS_BAR", cfg.VISUAL_PROGRESS_BAR)
+    )
+    cfg.SMART_CROP_ENABLED = bool(raw.get("SMART_CROP_ENABLED", cfg.SMART_CROP_ENABLED))
+    cfg.USE_GPU_CLIP_ENCODE = bool(
+        raw.get("USE_GPU_CLIP_ENCODE", cfg.USE_GPU_CLIP_ENCODE)
+    )
+    cfg.LOCAL_TTS_PREFERRED = bool(
+        raw.get("LOCAL_TTS_PREFERRED", cfg.LOCAL_TTS_PREFERRED)
+    )
+    cfg.VISUAL_WATERMARK_TEXT = str(
+        raw.get("VISUAL_WATERMARK_TEXT", cfg.VISUAL_WATERMARK_TEXT) or ""
+    )
 
 
 def _media_site_hint(url: str) -> str:
@@ -84,6 +109,7 @@ def _run_pipeline_core(
     source_by_path: dict[str, VideoSourceAttribution] | None = None,
 ) -> list[str]:
     store = get_store() if item_id is not None else None
+    _apply_pipeline_improvements(pipeline_kwargs)
 
     def _on_progress(frac: float) -> None:
         hub.publish_progress(frac)
@@ -103,7 +129,11 @@ def _run_pipeline_core(
         zip_note = f" Zip: {zp.name}."
         _log.info("Zip exportado: %s", zp)
 
-    hub.mark_done(results, message=f"{len(results)} clipe(s) gerado(s).{zip_note}")
+    hub.mark_done(
+        results,
+        message=f"{len(results)} clipe(s) gerado(s).{zip_note}",
+        output_urls=output_media_urls(results),
+    )
     if store and item_id is not None:
         store.mark_pipeline_done(item_id, results)
     return results

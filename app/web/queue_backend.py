@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 import os
 import threading
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 _log = logging.getLogger("web.queue")
 
@@ -40,8 +41,6 @@ def enqueue_callable(func: Callable[..., Any], *args: Any, **kwargs: Any) -> str
     Enfileira `func` e devolve id do job (RQ) ou id sintético `local-<n>`.
     """
     if redis_available():
-        from rq import Queue
-
         q = get_rq_queue()
         job = q.enqueue(func, *args, **kwargs, job_timeout="6h")
         _log.info("Job RQ enfileirado: %s", job.id)
@@ -71,3 +70,10 @@ def enqueue_playlist_batch(item_ids: list[int]) -> str:
     from app.web.tasks import process_playlist_batch_task
 
     return enqueue_callable(process_playlist_batch_task, item_ids)
+
+
+def enqueue_studio_job(job_id: str, payload: dict[str, Any]) -> str:
+    """Enfileira um fluxo do studio (quiz, batalha, história, TTS ou YouTube)."""
+    from app.web.studio_worker import run_studio_job
+
+    return enqueue_callable(run_studio_job, job_id, payload)

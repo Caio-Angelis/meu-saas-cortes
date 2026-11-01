@@ -21,6 +21,7 @@ from app.core.config import (
     CLIP_DURATION,
     VIRAL_CANDIDATE_COUNT,
     VIRAL_CLIPS_COUNT,
+    VIRAL_EDITORIAL_FOCUS,
     VIRAL_SELECTION_PROFILE,
 )
 
@@ -673,16 +674,57 @@ def contextual_cta_for_candidate(candidate: dict, language: str = "pt") -> str:
 
 
 def _parse_moments(content: str) -> list:
-    raw = _extract_json_array(content)
+    try:
+        raw = _extract_json_array(content)
+    except ValueError:
+        recovered = _recover_complete_json_objects(content)
+        if recovered:
+            return recovered
+        raise
     try:
         value = json.loads(raw)
     except json.JSONDecodeError:
-        value = json.loads(_sanitize_json(raw))
+        try:
+            value = json.loads(_sanitize_json(raw))
+        except json.JSONDecodeError:
+            recovered = _recover_complete_json_objects(raw)
+            if recovered:
+                _log.warning(
+                    "Resposta viral parcialmente inválida; recuperados %s candidato(s) completos.",
+                    len(recovered),
+                )
+                return recovered
+            raise
     if isinstance(value, dict):
         value = value.get("candidates") or value.get("moments") or []
     if not isinstance(value, list):
         raise ValueError("Resposta do modelo não é uma lista JSON")
     return value
+
+
+def _recover_complete_json_objects(text: str) -> list[dict]:
+    """Recupera os objetos completos antes de uma resposta JSON truncada/quebrada."""
+
+    raw = _sanitize_json(str(text or ""))
+    start = raw.find("[")
+    if start < 0:
+        return []
+    decoder = json.JSONDecoder()
+    cursor = start + 1
+    recovered: list[dict] = []
+    while cursor < len(raw):
+        while cursor < len(raw) and (raw[cursor].isspace() or raw[cursor] == ","):
+            cursor += 1
+        if cursor >= len(raw) or raw[cursor] == "]":
+            break
+        try:
+            value, end = decoder.raw_decode(raw, cursor)
+        except json.JSONDecodeError:
+            break
+        if isinstance(value, dict):
+            recovered.append(value)
+        cursor = end
+    return recovered
 
 
 def _extract_json_array(text: str) -> str:
@@ -884,6 +926,7 @@ def _build_prompt(
     selection_profile: str,
     performance_profile: ContentPerformanceProfile | None,
     clip_target: float,
+    editorial_focus: str = "",
 ) -> str:
     if output_language == "pt":
         language_rules = (
@@ -900,6 +943,15 @@ def _build_prompt(
         if performance_profile is not None
         else "Nenhum relatório histórico foi fornecido; use apenas a transcrição."
     )
+    focus_rule = ""
+    if editorial_focus.strip():
+        focus_rule = (
+            "FOCO EDITORIAL DESTE LOTE (prioridade explícita do editor):\n"
+            f"- {editorial_focus.strip()}\n"
+            "- Selecione apenas trechos realmente ligados a esse foco. Não force o tema quando a "
+            "fala não o sustentar. Prefira opinião clara, conflito legítimo e potencial de "
+            "comentários, sempre preservando o sentido original.\n\n"
+        )
     return (
         "Você é um editor de cortes para TikTok de guitarra, música, rock, blues, teoria musical "
         "e entrevistas com músicos. Encontre trechos que funcionem sem o resto do vídeo. "
@@ -936,6 +988,7 @@ def _build_prompt(
         f"Perfil de seleção local: {selection_profile}. Hook, clareza sem contexto, curiosidade, "
         "retenção provável e payoff têm prioridade.\n"
         f"{profile_summary}\n\n"
+        f"{focus_rule}"
         f"{language_rules}"
         "- `entities`: nomes de pessoas, bandas, músicas, técnicas ou assuntos reconhecíveis que aparecem literalmente.\n"
         "- `topic`: etiqueta curta para detectar o mesmo conceito em outros candidatos.\n"
@@ -988,6 +1041,7 @@ def analyze_viral_moments(
         selection_profile=profile,
         performance_profile=performance_profile,
         clip_target=clip_target,
+        editorial_focus=VIRAL_EDITORIAL_FOCUS,
     )
     _log.info(
         "Chamando Groq para descoberta/ranking viral (%s segmentos, ~%.0fs, %s candidatos, perfil=%s).",

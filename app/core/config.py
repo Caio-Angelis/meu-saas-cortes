@@ -80,6 +80,9 @@ CLIP_SPEED_UP_PERCENT: float = float(os.getenv("CLIP_SPEED_UP_PERCENT", "2"))
 VIRAL_SELECTION_PROFILE: str = (
     os.getenv("VIRAL_SELECTION_PROFILE", "tiktok_growth").strip().lower() or "tiktok_growth"
 )
+# Foco opcional por lote (ex.: "músico brasileiro conhecido falando de política").
+# Entra no prompt e na chave de cache para não reutilizar rankings de outro tema.
+VIRAL_EDITORIAL_FOCUS: str = os.getenv("VIRAL_EDITORIAL_FOCUS", "").strip()
 try:
     _viral_candidate_count = int(os.getenv("VIRAL_CANDIDATE_COUNT", "12"))
 except ValueError:

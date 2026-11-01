@@ -229,3 +229,58 @@ def test_upload_video_builds_official_videos_insert_request(tmp_path: Path, monk
     assert result.privacy_status == "private"
     assert result.publish_at == "2026-08-09T11:00:00Z"
     assert progress == [0.5, 1.0]
+
+
+def test_explicit_upload_preserves_metadata_and_synthetic_media_flag(tmp_path: Path, monkeypatch):
+    video = tmp_path / "explicit.mp4"
+    video.write_bytes(b"fake mp4")
+    captured = {}
+
+    class FakeRequest:
+        def next_chunk(self):
+            return None, {
+                "id": "synthetic123",
+                "snippet": {"channelId": "channel-1"},
+                "status": {"privacyStatus": "public"},
+            }
+
+    class FakeVideos:
+        def insert(self, **kwargs):
+            captured.update(kwargs)
+            return FakeRequest()
+
+    class FakeYouTube:
+        def videos(self):
+            return FakeVideos()
+
+    class FakeHttpError(Exception):
+        pass
+
+    class FakeHttpLib2:
+        class HttpLib2Error(Exception):
+            pass
+
+    def fake_media(path, **kwargs):
+        captured["media"] = (path, kwargs)
+        return object()
+
+    monkeypatch.setattr(
+        uploader,
+        "_google_dependencies",
+        lambda: (object, object, object, object, FakeHttpError, (fake_media, FakeHttpLib2)),
+    )
+
+    result = uploader.upload_video_to_youtube(
+        video,
+        title="Oração da noite",
+        description="Uma oração para descansar em Deus.",
+        contains_synthetic_media=True,
+        youtube_client=FakeYouTube(),
+    )
+
+    assert captured["body"]["snippet"]["title"] == "Oração da noite"
+    assert captured["body"]["snippet"]["description"] == "Uma oração para descansar em Deus."
+    assert captured["body"]["status"]["containsSyntheticMedia"] is True
+    assert result.video_id == "synthetic123"
+    assert result.channel_id == "channel-1"
+    assert result.privacy_status == "public"

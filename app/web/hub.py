@@ -15,6 +15,7 @@ class JobSnapshot:
     progress: float = 0.0
     message: str = ""
     outputs: list[str] = field(default_factory=list)
+    output_urls: list[str | None] = field(default_factory=list)
     error: str | None = None
     active_item_id: int | None = None
     active_source: str | None = None
@@ -79,6 +80,7 @@ class ProgressHub:
                 "type": "done",
                 "frac": 1.0,
                 "outputs": snap.outputs,
+                "output_urls": snap.output_urls,
                 "message": snap.message,
             }
         if snap.status == "error":
@@ -132,19 +134,27 @@ class ProgressHub:
             self.snapshot.message = message
         self._emit_threadsafe({"type": "log", "message": message})
 
-    def mark_done(self, outputs: list[str], message: str = "Concluído.") -> None:
+    def mark_done(
+        self,
+        outputs: list[str],
+        message: str = "Concluído.",
+        *,
+        output_urls: list[str | None] | None = None,
+    ) -> None:
         with self._hub_lock:
             self.snapshot = JobSnapshot(
                 status="done",
                 progress=1.0,
                 message=message,
                 outputs=list(outputs),
+                output_urls=list(output_urls or []),
             )
         self._emit_threadsafe(
             {
                 "type": "done",
                 "frac": 1.0,
                 "outputs": outputs,
+                "output_urls": list(output_urls or []),
                 "message": message,
             }
         )

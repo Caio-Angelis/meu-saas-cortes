@@ -33,7 +33,14 @@ async def create_job(
     clip_start: str = Form(""),
     clip_end: str = Form(""),
     use_playlist: bool = Form(False),
-    files: list[UploadFile] = File(default=[]),
+    karaoke: bool = Form(False),
+    visual_grade: bool = Form(False),
+    visual_progress: bool = Form(False),
+    smart_crop: bool = Form(True),
+    gpu_encode: bool = Form(True),
+    prefer_local_tts: bool = Form(True),
+    watermark: str = Form(""),
+    files: list[UploadFile] = File(default=[]),  # noqa: B008
 ) -> JobCreatedResponse:
     hub = ProgressHub.get()
     if hub.is_running():
@@ -76,6 +83,15 @@ async def create_job(
             outro_text=outro_text,
             clip_start=clip_start,
             clip_end=clip_end,
+            improvements={
+                "SUBTITLE_KARAOKE": karaoke,
+                "VISUAL_GRADE": visual_grade,
+                "VISUAL_PROGRESS_BAR": visual_progress,
+                "SMART_CROP_ENABLED": smart_crop,
+                "USE_GPU_CLIP_ENCODE": gpu_encode,
+                "LOCAL_TTS_PREFERRED": prefer_local_tts,
+                "VISUAL_WATERMARK_TEXT": watermark.strip(),
+            },
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

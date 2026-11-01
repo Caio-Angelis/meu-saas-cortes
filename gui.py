@@ -1,17 +1,7 @@
-"""
-Interface gráfica com workspace principal para cortes e ferramentas secundárias.
+"""Atalho de compatibilidade para a interface web do Cortes Lab.
 
-- Workspace «Cortes Virais»: pipeline de clipes (mesmas opções do main.py), com
-  ação principal fixa e controles essenciais visíveis no primeiro enquadramento.
-- Aba «Máquina de Quizzes»: geração de vídeo quiz via `app.pipelines.quiz.quiz_pipeline`.
-- Aba «Batalha 1v1»: duelo por física 2D (`app.pipelines.batalha.batalha_pipeline`).
-- Aba «História»: vídeo narrado com cenas IA (`app.pipelines.historia.historia_pipeline` + ComfyUI).
-- Aba «Text-to-Speech»: texto → MP3 (local Kokoro / Gemini / Edge) com pré-ouvir a voz.
-- Aba «Análise de desempenho»: CSV dos últimos 7 dias → 3 próximos temas recomendados.
-- Log e tabela de resultados ficam em um painel de atividade recolhível.
-
-Execute na raiz do projeto:
-    python gui.py
+O studio principal agora é servido por ``web_main.py``. Este arquivo continua
+aceitando os atalhos antigos e delega a execução ao mesmo servidor FastAPI.
 """
 
 from __future__ import annotations
@@ -30,7 +20,6 @@ apply_linux_desktop_defaults()
 
 import asyncio
 import io
-import logging
 import os
 import queue
 import subprocess
@@ -78,7 +67,7 @@ from app.core.config import (
     TEMP_DIR,
     TIKTOK_UPLOAD_URL,
 )
-from app.core.logging_setup import gui_pipeline_log_redirect, setup_logging
+from app.core.logging_setup import gui_pipeline_log_redirect
 from app.download.ytdlp_download import (
     VideoSourceAttribution,
     collect_urls_from_lines,
@@ -4175,10 +4164,14 @@ class CortesApp(tk.Tk):
 
 
 def main() -> None:
-    setup_logging(gui_quiet=True)
-    logging.getLogger("httpx").setLevel(logging.WARNING)
-    logging.getLogger("httpcore").setLevel(logging.WARNING)
-    CortesApp().mainloop()
+    """Compatibilidade para quem ainda executa ``gui.py``.
+
+    A experiência principal agora é a Web UI local. O arquivo continua existindo
+    para não quebrar atalhos antigos, mas delega a inicialização ao servidor web.
+    """
+    from web_main import _main as run_web
+
+    run_web()
 
 
 if __name__ == "__main__":

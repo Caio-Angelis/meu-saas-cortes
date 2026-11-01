@@ -1,247 +1,184 @@
-<!DOCTYPE html>
-<html lang="pt-BR" class="h-full">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ title }} — Web Local</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            surface: { DEFAULT: "#1a1d23", card: "#22262e", border: "#2d333b" },
-            accent: { DEFAULT: "#22d3ee", dim: "#0891b2" },
-            progress: { DEFAULT: "#22c55e", track: "#14532d" },
-          },
-        },
-      },
-    };
-  </script>
-</head>
-<body class="h-full bg-surface text-slate-200 antialiased">
-  <div class="min-h-full flex flex-col">
-    <header class="border-b border-surface-border bg-surface-card/80 backdrop-blur sticky top-0 z-10">
-      <div class="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-        <span class="w-1 h-8 rounded-full bg-accent shrink-0" aria-hidden="true"></span>
-        <div>
-          <h1 class="text-xl font-semibold tracking-tight text-white">{{ title }}</h1>
-          <p class="text-sm text-slate-400">Interface web local · pipeline idêntico à GUI</p>
-        </div>
-      </div>
-    </header>
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101411" />
+    <title>{{ title }} · Creative automation studio</title>
+    <link rel="stylesheet" href="/static/css/app.css" />
+  </head>
+  <body>
+    <svg class="svg-sprite" aria-hidden="true" focusable="false">
+      <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+      <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="m8.7 7.4 11.8 6.8M8.7 16.6l11.8-6.8"/></symbol>
+      <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="m12 3 1.45 4.55L18 9l-4.55 1.45L12 15l-1.45-4.55L6 9l4.55-1.45L12 3ZM19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15ZM5 14l.55 1.45L7 16l-1.45.55L5 18l-.55-1.45L3 16l1.45-.55L5 14Z"/></symbol>
+      <symbol id="i-battle" viewBox="0 0 24 24"><path d="m7 3 4 4-2 2 5 5 2-2 4 4-4 4-4-4 2-2-5-5-2 2-4-4L7 3Z"/><path d="m4 20 4-4M16 8l4-4"/></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z"/><path d="M4 5.5v16M8 7h8M8 11h7"/></symbol>
+      <symbol id="i-mic" viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="12" rx="4"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 19V5M4 19h17"/><path d="m7 15 3-4 3 2 5-7"/><circle cx="7" cy="15" r="1"/><circle cx="10" cy="11" r="1"/><circle cx="13" cy="13" r="1"/><circle cx="18" cy="6" r="1"/></symbol>
+      <symbol id="i-youtube" viewBox="0 0 24 24"><path d="M21 7.3a2.8 2.8 0 0 0-2-2C17.2 4.8 12 4.8 12 4.8s-5.2 0-7 .5a2.8 2.8 0 0 0-2 2C2.5 9.1 2.5 12 2.5 12s0 2.9.5 4.7a2.8 2.8 0 0 0 2 2c1.8.5 7 .5 7 .5s5.2 0 7-.5a2.8 2.8 0 0 0 2-2c.5-1.8.5-4.7.5-4.7s0-2.9-.5-4.7Z"/><path d="m10 9 5 3-5 3V9Z"/></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="m19.4 15 .1.1a2 2 0 0 1-2.8 2.8l-.1-.1a2 2 0 0 0-3.4 1.4v.2a2 2 0 0 1-4 0v-.2a2 2 0 0 0-3.4-1.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A2 2 0 0 0 3.7 12a2 2 0 0 0-.7-1.5l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a2 2 0 0 0 3.4-1.4v-.2a2 2 0 0 1 4 0v.2a2 2 0 0 0 3.4 1.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a2 2 0 0 0 0 2.9Z"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></symbol>
+      <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13.5a4 4 0 0 0 5.7.2l2.8-2.8a4 4 0 0 0-5.7-5.7l-1.6 1.6"/><path d="M14 10.5a4 4 0 0 0-5.7-.2l-2.8 2.8a4 4 0 0 0 5.7 5.7l1.6-1.6"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></symbol>
+      <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 5h5v5M19 5l-8 8"/><path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.8-3L4 10"/><path d="M4 5v5h5M4 13a8 8 0 0 0 14.8 3L20 14"/><path d="M20 19v-5h-5"/></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></symbol>
+      <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M14 3v5h5M8 13h8M8 17h6"/></symbol>
+      <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="11" cy="18" r="2"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15.2A8.2 8.2 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    </svg>
 
-    <main class="flex-1 max-w-5xl mx-auto w-full px-4 py-8 space-y-8">
-      <form id="pipeline-form" class="space-y-6" enctype="multipart/form-data">
-        <section class="rounded-xl border border-surface-border bg-surface-card p-5 space-y-4">
-          <h2 class="text-sm font-medium uppercase tracking-wider text-accent">Entrada</h2>
-
-          <div>
-            <label for="urls" class="block text-sm text-slate-300 mb-1">URLs (uma por linha)</label>
-            <textarea
-              id="urls"
-              name="urls"
-              rows="4"
-              placeholder="https://www.youtube.com/watch?v=…"
-              class="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
-            ></textarea>
-          </div>
-
-          <div>
-            <label for="files" class="block text-sm text-slate-300 mb-1">Vídeos locais</label>
-            <input
-              id="files"
-              name="files"
-              type="file"
-              accept="video/*,.mp4,.mkv,.webm,.mov"
-              multiple
-              class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-accent/20 file:text-accent hover:file:bg-accent/30"
-            />
-          </div>
-        </section>
-
-        <section class="rounded-xl border border-surface-border bg-surface-card p-5 space-y-4">
-          <h2 class="text-sm font-medium uppercase tracking-wider text-accent">Opções</h2>
-
-          <div class="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label for="lang" class="block text-sm text-slate-300 mb-1">Idioma das legendas</label>
-              <select id="lang" name="lang" class="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm focus:ring-2 focus:ring-accent/50">
-                <option value="pt" selected>Português</option>
-                <option value="en">Inglês</option>
-              </select>
-            </div>
-            <div>
-              <label for="position" class="block text-sm text-slate-300 mb-1">Posição da legenda</label>
-              <select id="position" name="position" class="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm focus:ring-2 focus:ring-accent/50">
-                <option value="bottom" selected>Inferior</option>
-                <option value="top">Superior</option>
-              </select>
-            </div>
-          </div>
-
-          <fieldset class="space-y-2">
-            <legend class="text-sm text-slate-300">Dublagem (Edge-TTS)</legend>
-            <label class="inline-flex items-center gap-2 mr-4 cursor-pointer">
-              <input type="checkbox" id="dub-en" name="dub_en" value="true" class="rounded border-surface-border bg-surface text-accent focus:ring-accent" />
-              <span class="text-sm">Dublar em inglês</span>
-            </label>
-            <label class="inline-flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" id="dub-pt" name="dub_pt" value="true" class="rounded border-surface-border bg-surface text-accent focus:ring-accent" />
-              <span class="text-sm">Dublar em português</span>
-            </label>
-          </fieldset>
-
-          <label class="inline-flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" id="export-zip" name="export_zip" value="true" class="rounded border-surface-border bg-surface text-accent focus:ring-accent" />
-            <span class="text-sm">Exportar .zip ao concluir</span>
-          </label>
-        </section>
-
-        <section class="rounded-xl border border-surface-border bg-surface-card p-5 space-y-4">
-          <div>
-            <h2 class="text-sm font-medium uppercase tracking-wider text-accent">Edição editorial</h2>
-            <p class="text-xs text-slate-500 mt-1">Preencha os segundos para fixar um trecho; vazio mantém a seleção automática.</p>
-          </div>
-
-          <div class="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label for="clip-start" class="block text-sm text-slate-300 mb-1">Início (segundos)</label>
-              <input
-                id="clip-start"
-                name="clip_start"
-                type="number"
-                min="0"
-                step="0.001"
-                placeholder="ex.: 13.5"
-                class="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
-              />
-            </div>
-            <div>
-              <label for="clip-end" class="block text-sm text-slate-300 mb-1">Fim (segundos)</label>
-              <input
-                id="clip-end"
-                name="clip_end"
-                type="number"
-                min="0"
-                step="0.001"
-                placeholder="ex.: 49.8"
-                class="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label for="hook-text" class="block text-sm text-slate-300 mb-1">Texto inicial (visível nos 3 primeiros segundos)</label>
-            <input
-              id="hook-text"
-              name="hook_text"
-              type="text"
-              value="Ele acabou de irritar metade dos guitarristas…"
-              maxlength="180"
-              class="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-accent/50"
-            />
-          </div>
-
-          <div>
-            <label for="outro-text" class="block text-sm text-slate-300 mb-1">Tela final / comentário próprio</label>
-            <textarea
-              id="outro-text"
-              name="outro_text"
-              rows="4"
-              maxlength="640"
-              class="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
-            >Minha leitura: o ataque muda o groove — não existe uma única palhetada “certa”.
-
-Concorda com ele? Comenta e segue o Bendify para mais discussões sobre guitarra.</textarea>
-          </div>
-        </section>
-
-        <section class="rounded-xl border border-surface-border bg-surface-card p-5 space-y-3">
-          <div class="flex justify-between text-sm">
-            <span id="progress-label" class="text-slate-400">Aguardando…</span>
-            <span id="progress-pct" class="font-mono text-progress">0%</span>
-          </div>
-          <div class="h-3 rounded-full bg-progress-track overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-bar-wrap">
-            <div id="progress-bar" class="h-full w-0 rounded-full bg-progress transition-all duration-300 ease-out"></div>
-          </div>
-          <p id="status-message" class="text-xs text-slate-500 truncate"></p>
-        </section>
-
-        <div class="flex flex-wrap gap-3" >
-          <button
-            type="submit"
-            id="submit-btn"
-            class="px-6 py-3 rounded-lg bg-accent text-surface font-semibold hover:bg-cyan-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Gerar clipes agora
+    <div class="app-shell">
+      <div class="mobile-scrim" id="mobile-scrim"></div>
+      <aside class="sidebar" id="sidebar">
+        <div class="brand-row">
+          <button class="brand" type="button" data-page-target="overview" aria-label="Ir para o início">
+            <span class="brand-mark"><svg class="icon icon-lg"><use href="#i-scissors"></use></svg></span>
+            <span class="brand-copy"><strong>Cortes<span>Lab</span></strong><small>creative automation</small></span>
           </button>
-          <button
-            type="button"
-            id="add-playlist-btn"
-            class="px-6 py-3 rounded-lg border border-accent/40 text-accent hover:bg-accent/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Adicionar à playlist
-          </button>
+          <button class="icon-button sidebar-close" type="button" id="sidebar-close" aria-label="Fechar menu"><svg class="icon"><use href="#i-close"></use></svg></button>
         </div>
-        <p id="form-error" class="text-sm text-red-400 hidden"></p>
-        <p id="queue-hint" class="text-xs text-slate-500 hidden"></p>
-      </form>
 
-      <section class="rounded-xl border border-surface-border bg-surface-card overflow-hidden">
-        <div class="px-5 py-4 border-b border-surface-border flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 class="text-sm font-medium uppercase tracking-wider text-accent">Playlist</h2>
-            <p class="text-xs text-slate-500 mt-0.5">Estados: pendente → processar → publicado ou descartado</p>
+        <nav class="sidebar-nav" aria-label="Workspaces">
+          <div class="nav-label">Studio</div>
+          <button class="nav-item is-active" type="button" data-page-target="overview"><svg class="icon"><use href="#i-grid"></use></svg><span>Visão geral</span></button>
+          <button class="nav-item" type="button" data-page-target="cortes"><svg class="icon"><use href="#i-scissors"></use></svg><span>Cortes virais</span><em>01</em></button>
+          <button class="nav-item" type="button" data-page-target="quiz"><svg class="icon"><use href="#i-sparkles"></use></svg><span>Máquina de quizzes</span></button>
+          <button class="nav-item" type="button" data-page-target="batalha"><svg class="icon"><use href="#i-battle"></use></svg><span>Batalha 1v1</span></button>
+          <button class="nav-item" type="button" data-page-target="historia"><svg class="icon"><use href="#i-book"></use></svg><span>História</span></button>
+          <button class="nav-item" type="button" data-page-target="tts"><svg class="icon"><use href="#i-mic"></use></svg><span>Voz / TTS</span></button>
+
+          <div class="nav-label nav-label-spaced">Operação</div>
+          <button class="nav-item" type="button" data-page-target="analytics"><svg class="icon"><use href="#i-chart"></use></svg><span>Analytics</span></button>
+          <button class="nav-item" type="button" data-page-target="youtube"><svg class="icon"><use href="#i-youtube"></use></svg><span>Publicar</span></button>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <div class="engine-status">
+            <span class="status-dot is-live"></span>
+            <div><strong>Motor local</strong><small>seus arquivos ficam aqui</small></div>
+            <span class="status-pulse"></span>
           </div>
-          <div class="flex flex-wrap gap-2">
-            <button type="button" id="process-playlist-btn" class="px-4 py-2 text-sm rounded-lg bg-progress/20 text-progress hover:bg-progress/30 disabled:opacity-50">
-              Processar playlist
-            </button>
-            <button type="button" id="refresh-playlist" class="text-xs text-slate-400 hover:text-accent px-2 py-2">Atualizar</button>
+          <button class="nav-item" type="button" data-page-target="settings"><svg class="icon"><use href="#i-settings"></use></svg><span>Configurações</span></button>
+          <div class="sidebar-version">CORTES LAB <span>·</span> v2.0</div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button class="icon-button mobile-menu" type="button" id="mobile-menu" aria-label="Abrir menu"><svg class="icon"><use href="#i-menu"></use></svg></button>
+            <div class="breadcrumb"><span>Studio</span><svg class="icon icon-xs"><use href="#i-arrow"></use></svg><strong id="breadcrumb-title">Visão geral</strong></div>
           </div>
-        </div>
-        <div class="overflow-x-auto max-h-80 overflow-y-auto">
-          <table class="w-full text-sm">
-            <thead class="text-left text-slate-500 border-b border-surface-border sticky top-0 bg-surface-card">
-              <tr>
-                <th class="px-5 py-3 font-medium">Fonte</th>
-                <th class="px-5 py-3 font-medium w-24">Workflow</th>
-                <th class="px-5 py-3 font-medium w-24">Pipeline</th>
-                <th class="px-5 py-3 font-medium w-16">%</th>
-                <th class="px-5 py-3 font-medium w-48"></th>
-              </tr>
-            </thead>
-            <tbody id="playlist-tbody" class="divide-y divide-surface-border">
-              <tr><td colspan="5" class="px-5 py-6 text-slate-500 text-center">Carregando…</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+          <div class="topbar-actions">
+            <div class="connection-chip"><span class="status-dot is-live"></span><span>Servidor local</span></div>
+            <button class="icon-button" type="button" id="theme-toggle" aria-label="Alternar tema"><svg class="icon" id="theme-icon"><use href="#i-moon"></use></svg></button>
+            <button class="avatar" type="button" title="Workspace local">CL</button>
+          </div>
+        </header>
 
-      <section class="rounded-xl border border-surface-border bg-surface-card overflow-hidden">
-        <div class="px-5 py-4 border-b border-surface-border flex items-center justify-between">
-          <h2 class="text-sm font-medium uppercase tracking-wider text-accent">Últimas execuções</h2>
-          <button type="button" id="refresh-runs" class="text-xs text-slate-400 hover:text-accent">Atualizar</button>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="text-left text-slate-500 border-b border-surface-border">
-              <tr>
-                <th class="px-5 py-3 font-medium">Arquivo</th>
-                <th class="px-5 py-3 font-medium w-28">Duração</th>
-                <th class="px-5 py-3 font-medium w-24"></th>
-              </tr>
-            </thead>
-            <tbody id="runs-tbody" class="divide-y divide-surface-border">
-              <tr><td colspan="3" class="px-5 py-6 text-slate-500 text-center">Carregando…</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </main>
-  </div>
+        <div class="page-wrap">
+          <section class="page is-active" data-page="overview">
+            <div class="overview-head page-heading compact-heading">
+              <div><p class="eyebrow">QUINTA-FEIRA, 03 DE SETEMBRO</p><h1>Seu próximo vídeo começa aqui.</h1><p class="heading-subtitle">Um espaço local para transformar ideias, vídeos e métricas em conteúdo que prende atenção.</p></div>
+              <button class="button button-primary" type="button" data-page-target="cortes"><svg class="icon"><use href="#i-plus"></use></svg><span>Novo projeto</span></button>
+            </div>
 
-  <script src="/static/js/app.js" defer></script>
-</body>
+            <div class="hero-card">
+              <div class="hero-copy"><span class="hero-kicker"><span class="status-dot is-live"></span> CREATIVE AUTOMATION STUDIO</span><h2>De matéria-prima a <span>momento de replay.</span></h2><p>Escolha um fluxo, deixe o motor trabalhar e acompanhe cada etapa em tempo real — sem sair do seu computador.</p><div class="hero-actions"><button class="button button-primary" type="button" data-page-target="cortes">Criar cortes <svg class="icon"><use href="#i-arrow"></use></svg></button><button class="button button-ghost" type="button" data-page-target="quiz">Explorar fluxos</button></div></div>
+              <div class="hero-visual" aria-hidden="true"><div class="hero-orbit orbit-a"></div><div class="hero-orbit orbit-b"></div><div class="hero-core"><svg class="icon icon-xl"><use href="#i-scissors"></use></svg><span>IDEA<br><b>→</b> CLIP</span></div><span class="orbit-tag tag-a">HOOK</span><span class="orbit-tag tag-b">9:16</span><span class="orbit-tag tag-c">AI</span></div>
+            </div>
+
+            <div class="stats-grid">
+              <div class="stat-card"><div class="stat-icon accent-icon"><svg class="icon"><use href="#i-play"></use></svg></div><div><span class="stat-label">Vídeos prontos</span><strong id="stat-videos">—</strong><small><span class="trend-up">●</span> resultados locais</small></div></div>
+              <div class="stat-card"><div class="stat-icon purple-icon"><svg class="icon"><use href="#i-clock"></use></svg></div><div><span class="stat-label">Na fila</span><strong id="stat-queued">—</strong><small>aguardando processamento</small></div></div>
+              <div class="stat-card"><div class="stat-icon blue-icon"><svg class="icon"><use href="#i-link"></use></svg></div><div><span class="stat-label">Playlist pendente</span><strong id="stat-pending">—</strong><small>fontes para revisar</small></div></div>
+              <div class="stat-card"><div class="stat-icon warm-icon"><svg class="icon"><use href="#i-chart"></use></svg></div><div><span class="stat-label">Modo de trabalho</span><strong>Local-first</strong><small>privacidade por padrão</small></div></div>
+            </div>
+
+            <div class="section-heading"><div><p class="eyebrow">FLUXOS RÁPIDOS</p><h2>O que você quer criar?</h2></div><span class="section-note">Escolha um ponto de partida</span></div>
+            <div class="quick-grid">
+              <button class="quick-card quick-card-main" type="button" data-page-target="cortes"><span class="quick-card-icon"><svg class="icon"><use href="#i-scissors"></use></svg></span><span class="quick-card-body"><strong>Cortes virais</strong><small>Encontre os melhores momentos de um vídeo e transforme em clipes verticais.</small><em>Começar agora <svg class="icon icon-xs"><use href="#i-arrow"></use></svg></em></span><span class="quick-card-art art-wave"></span></button>
+              <button class="quick-card" type="button" data-page-target="quiz"><span class="quick-card-icon purple-icon"><svg class="icon"><use href="#i-sparkles"></use></svg></span><span class="quick-card-body"><strong>Máquina de quizzes</strong><small>Perguntas, timer, voz e vídeo em um só fluxo.</small><em>Gerar quiz <svg class="icon icon-xs"><use href="#i-arrow"></use></svg></em></span></button>
+              <button class="quick-card" type="button" data-page-target="batalha"><span class="quick-card-icon orange-icon"><svg class="icon"><use href="#i-battle"></use></svg></span><span class="quick-card-body"><strong>Batalha 1v1</strong><small>Duelo com física, narração e identidade visual.</small><em>Montar duelo <svg class="icon icon-xs"><use href="#i-arrow"></use></svg></em></span></button>
+              <button class="quick-card" type="button" data-page-target="historia"><span class="quick-card-icon blue-icon"><svg class="icon"><use href="#i-book"></use></svg></span><span class="quick-card-body"><strong>História em vídeo</strong><small>Texto, cenas geradas, narração e montagem vertical.</small><em>Contar história <svg class="icon icon-xs"><use href="#i-arrow"></use></svg></em></span></button>
+            </div>
+
+            <div class="two-column-grid overview-lower">
+              <section class="panel recent-panel"><div class="panel-head"><div><p class="eyebrow">BIBLIOTECA</p><h2>Últimas saídas</h2></div><button class="text-button" type="button" id="refresh-runs"><svg class="icon icon-xs"><use href="#i-refresh"></use></svg> Atualizar</button></div><div class="recent-list" id="recent-list"><div class="empty-state compact-empty"><svg class="icon"><use href="#i-file"></use></svg><p>Nenhuma saída por aqui ainda.</p><small>Seu primeiro vídeo aparecerá nesta lista.</small></div></div></section>
+              <section class="panel local-panel"><div class="panel-head"><div><p class="eyebrow">COMO FUNCIONA</p><h2>Feito para iterar rápido</h2></div><span class="panel-badge">LOCAL</span></div><div class="principle-list"><div class="principle"><span class="principle-number">01</span><div><strong>Escolha o fluxo</strong><small>Cortes, quiz, batalha, história ou voz.</small></div></div><div class="principle"><span class="principle-number">02</span><div><strong>Acompanhe o processo</strong><small>Progresso e logs ficam visíveis em tempo real.</small></div></div><div class="principle"><span class="principle-number">03</span><div><strong>Baixe e publique</strong><small>Arquivos organizados em resultados/.</small></div></div></div><button class="button button-secondary full-button" type="button" data-page-target="settings">Ver configurações locais <svg class="icon icon-xs"><use href="#i-arrow"></use></svg></button></section>
+            </div>
+          </section>
+
+          <section class="page" data-page="cortes">
+            <div class="page-heading"><div><p class="eyebrow">WORKSPACE 01 · EDIÇÃO</p><h1>Cortes virais</h1><p class="heading-subtitle">Pegue um vídeo longo, encontre o que merece replay e saia com clipes verticais prontos para publicar.</p></div><span class="page-status"><span class="status-dot is-live"></span> pipeline pronto</span></div>
+            <form id="cuts-form" class="workspace-grid" enctype="multipart/form-data">
+              <div class="workspace-main">
+                <section class="panel form-panel"><div class="step-head"><span class="step-number">01</span><div><h2>Escolha uma fonte</h2><p>Use uma URL pública ou arraste seus arquivos locais.</p></div></div><div class="source-tabs"><button type="button" class="source-tab is-active" data-source-mode="url"><svg class="icon icon-xs"><use href="#i-link"></use></svg> URL ou tema</button><button type="button" class="source-tab" data-source-mode="file"><svg class="icon icon-xs"><use href="#i-upload"></use></svg> Arquivos locais</button></div><div class="source-view is-active" data-source-view="url"><label class="field-label" for="cortes-urls">URLs, uma por linha</label><textarea class="field textarea tall" id="cortes-urls" name="urls" placeholder="https://www.youtube.com/watch?v=..."></textarea><div class="field-helper"><svg class="icon icon-xs"><use href="#i-info"></use></svg> O yt-dlp baixa a fonte para <code>temp/</code> antes de processar.</div></div><div class="source-view" data-source-view="file"><label class="dropzone" for="cortes-files"><input id="cortes-files" name="files" type="file" accept="video/*,.mp4,.mkv,.webm,.mov,.avi" multiple /><span class="dropzone-icon"><svg class="icon"><use href="#i-upload"></use></svg></span><strong>Arraste os vídeos aqui</strong><small>ou clique para escolher · MP4, MKV, MOV, WEBM</small></label><div class="file-list" id="cortes-file-list"></div></div></section>
+                <section class="panel form-panel"><div class="step-head"><span class="step-number">02</span><div><h2>Direção do corte</h2><p>Defina idioma, legenda e o gancho que abre o vídeo.</p></div></div><div class="form-grid two"><div class="field-group"><label class="field-label" for="cortes-lang">Idioma das legendas</label><select class="field" id="cortes-lang" name="lang"><option value="pt">Português (Brasil)</option><option value="en">Inglês</option></select></div><div class="field-group"><label class="field-label" for="cortes-position">Posição da legenda</label><select class="field" id="cortes-position" name="position"><option value="bottom">Inferior</option><option value="top">Superior</option></select></div></div><div class="field-group"><label class="field-label" for="cortes-hook">Gancho de abertura <span>visível nos 3 primeiros segundos</span></label><input class="field" id="cortes-hook" name="hook_text" maxlength="180" value="Ele acabou de irritar metade dos guitarristas…" /></div><div class="field-group"><label class="field-label" for="cortes-outro">Tela final / CTA <span>opcional</span></label><textarea class="field textarea" id="cortes-outro" name="outro_text" rows="3" maxlength="640">Minha leitura: o ataque muda o groove — não existe uma única palhetada “certa”.
+
+Concorda com ele? Comenta e segue para mais discussões.</textarea></div><div class="form-grid two"><div class="field-group"><label class="field-label" for="cortes-start">Início manual <span>segundos</span></label><input class="field" id="cortes-start" name="clip_start" type="number" min="0" step="0.001" placeholder="automático" /></div><div class="field-group"><label class="field-label" for="cortes-end">Fim manual <span>segundos</span></label><input class="field" id="cortes-end" name="clip_end" type="number" min="0" step="0.001" placeholder="automático" /></div></div></section>
+                <details class="panel advanced-panel"><summary><span><svg class="icon icon-xs"><use href="#i-sliders"></use></svg> Ajustes avançados</span><small>aparência, dublagem e performance</small></summary><div class="details-content"><div class="form-grid three"><div class="field-group"><label class="field-label" for="cortes-font">Fonte</label><input class="field" id="cortes-font" name="font" value="Montserrat" /></div><div class="field-group"><label class="field-label" for="cortes-color">Cor do texto</label><div class="color-input"><input id="cortes-color-picker" type="color" value="#D7F66E" /><input class="field" id="cortes-color" name="color" value="#D7F66E" /></div></div><div class="field-group"><label class="field-label" for="cortes-bg-color">Fundo da legenda</label><div class="color-input"><input id="cortes-bg-picker" type="color" value="#101411" /><input class="field" id="cortes-bg-color" name="bg_color" value="#101411" /></div></div></div><div class="field-group range-group"><label class="field-label" for="cortes-opacity">Opacidade do fundo <output id="cortes-opacity-value">75%</output></label><input class="range" id="cortes-opacity" name="opacity" type="range" min="0" max="100" value="75" /></div><div class="form-grid two"><div class="field-group"><label class="field-label" for="cortes-voice">Voz da dublagem</label><select class="field" id="cortes-voice" name="tts_voice" data-voice-select><option value="">Padrão configurado</option></select></div><div class="field-group"><label class="field-label">Dublagem</label><div class="segmented"><label><input type="radio" name="dub" value="off" checked /><span>Sem dublagem</span></label><label><input type="radio" name="dub" value="pt" /><span>Português</span></label><label><input type="radio" name="dub" value="en" /><span>Inglês</span></label></div></div></div><div class="toggle-grid"><label class="toggle-row"><input type="checkbox" name="karaoke" /><span class="fake-toggle"></span><span><strong>Karaokê</strong><small>realce palavra por palavra</small></span></label><label class="toggle-row"><input type="checkbox" name="visual_grade" /><span class="fake-toggle"></span><span><strong>Grade visual</strong><small>tratamento de cor</small></span></label><label class="toggle-row"><input type="checkbox" name="visual_progress" /><span class="fake-toggle"></span><span><strong>Barra de progresso</strong><small>ritmo visível no vídeo</small></span></label><label class="toggle-row"><input type="checkbox" name="smart_crop" checked /><span class="fake-toggle"></span><span><strong>Smart crop</strong><small>foco automático no rosto</small></span></label><label class="toggle-row"><input type="checkbox" name="gpu_encode" checked /><span class="fake-toggle"></span><span><strong>GPU encode</strong><small>quando disponível</small></span></label><label class="toggle-row"><input type="checkbox" name="prefer_local_tts" checked /><span class="fake-toggle"></span><span><strong>Kokoro local</strong><small>preferir voz local</small></span></label><label class="toggle-row"><input id="cortes-export-zip" type="checkbox" name="export_zip" /><span class="fake-toggle"></span><span><strong>Exportar ZIP</strong><small>pacote com legendas</small></span></label></div><div class="field-group"><label class="field-label" for="cortes-watermark">Watermark <span>opcional</span></label><input class="field" id="cortes-watermark" name="watermark" placeholder="@seu_canal" /></div></div></details>
+                <div class="form-actions"><button class="button button-secondary" type="button" id="add-playlist-btn"><svg class="icon"><use href="#i-plus"></use></svg> Adicionar à playlist</button><button class="button button-primary" type="submit" data-job-control><svg class="icon"><use href="#i-play"></use></svg> Gerar clipes agora</button></div><p class="form-feedback" id="cuts-feedback" role="status"></p>
+              </div>
+              <aside class="workspace-side"><div class="panel mini-panel"><div class="mini-panel-head"><span class="panel-badge accent-badge">DICA</span><svg class="icon icon-sm"><use href="#i-sparkles"></use></svg></div><h3>Comece com um bom hook</h3><p>Os primeiros 3 segundos decidem se a pessoa continua. Use uma tensão, contraste ou promessa específica.</p><button class="text-button" type="button" data-fill-hook="Isso mudou completamente a conversa…">Usar sugestão <svg class="icon icon-xs"><use href="#i-arrow"></use></svg></button></div><div class="panel mini-panel"><div class="mini-panel-head"><span class="panel-badge">PLAYLIST</span><button class="icon-button small" type="button" id="refresh-playlist" aria-label="Atualizar playlist"><svg class="icon icon-xs"><use href="#i-refresh"></use></svg></button></div><div class="playlist-summary"><strong id="playlist-summary-count">0</strong><span>fontes aguardando revisão</span></div><button class="button button-secondary full-button" type="button" id="process-playlist-btn"><svg class="icon icon-xs"><use href="#i-play"></use></svg> Processar pendentes</button></div></aside>
+            </form>
+            <section class="panel playlist-panel"><div class="panel-head"><div><p class="eyebrow">CONTENT QUEUE</p><h2>Playlist de fontes</h2><p class="panel-subtitle">Organize, processe e marque o que já foi publicado.</p></div><div class="inline-controls"><select class="field field-small" id="playlist-filter"><option value="">Todas</option><option value="pendente">Pendentes</option><option value="publicado">Publicados</option><option value="descartado">Descartados</option></select></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Fonte</th><th>Workflow</th><th>Pipeline</th><th>Progresso</th><th></th></tr></thead><tbody id="playlist-tbody"><tr><td colspan="5" class="table-empty">Carregando playlist…</td></tr></tbody></table></div></section>
+          </section>
+
+          <section class="page" data-page="quiz">
+            <div class="page-heading"><div><p class="eyebrow">WORKSPACE 02 · FORMATO</p><h1>Máquina de quizzes</h1><p class="heading-subtitle">Perguntas que seguram a atenção, timer que cria tensão e um vídeo pronto para o feed.</p></div><span class="page-status purple-status"><span class="status-dot"></span> 4 etapas automáticas</span></div>
+            <form class="workspace-grid" data-studio-form data-job-type="quiz" id="quiz-form"><div class="workspace-main"><section class="panel form-panel"><div class="step-head"><span class="step-number purple-step">01</span><div><h2>Defina o desafio</h2><p>A IA cria e verifica as perguntas antes de montar o vídeo.</p></div></div><div class="field-group"><label class="field-label" for="quiz-theme">Tema ou nicho</label><input class="field field-xl" id="quiz-theme" name="theme" value="Conhecimentos gerais" placeholder="Ex.: futebol, história do Brasil, cinema…" /></div><div class="form-grid two"><div class="field-group"><label class="field-label" for="quiz-count">Quantidade de perguntas</label><select class="field" id="quiz-count" name="count"><option>3</option><option selected>5</option><option>7</option><option>10</option></select></div><div class="field-group"><label class="field-label" for="quiz-difficulty">Dificuldade</label><select class="field" id="quiz-difficulty" name="difficulty"><option value="facil">Fácil</option><option value="medio">Médio</option><option value="dificil">Difícil</option><option value="variado" selected>Variado</option></select></div></div><div class="field-group"><label class="field-label" for="quiz-timer">Tempo para responder <output id="quiz-timer-value">5s</output></label><input class="range purple-range" id="quiz-timer" name="timer_sec" type="range" min="3" max="10" value="5" /></div></section><section class="panel form-panel"><div class="step-head"><span class="step-number purple-step">02</span><div><h2>Clima do vídeo</h2><p>Escolha a voz e o tom visual que combinam com seu nicho.</p></div></div><div class="field-group"><label class="field-label" for="quiz-voice">Voz da narração</label><select class="field" id="quiz-voice" name="tts_voice" data-voice-select><option value="">Carregando vozes…</option></select></div><div class="field-group"><label class="field-label" for="quiz-bg">Cor de fundo</label><div class="color-input"><input id="quiz-bg-picker" type="color" value="#171327" /><input class="field" id="quiz-bg" name="cor_fundo" value="#171327" /></div></div></section><div class="form-actions"><span class="action-note"><svg class="icon icon-xs"><use href="#i-info"></use></svg> O vídeo será salvo em <code>resultados/</code>.</span><button class="button button-primary purple-button" type="submit" data-job-control><svg class="icon"><use href="#i-sparkles"></use></svg> Gerar quiz</button></div><p class="form-feedback" id="quiz-feedback" role="status"></p></div><aside class="workspace-side"><div class="format-preview purple-preview"><span class="preview-label">FORMATO</span><strong>9:16</strong><span>vertical first</span><div class="preview-phone"><div class="preview-phone-line"></div><div class="preview-phone-question">Qual é<br /><b>o seu palpite?</b></div><div class="preview-phone-timer">05</div></div></div><div class="panel mini-panel"><span class="panel-badge purple-badge">RETENÇÃO</span><h3>A tensão está no timer</h3><p>Entre 3 e 6 segundos, o público precisa escolher antes de pensar demais.</p></div></aside></form>
+          </section>
+
+          <section class="page" data-page="batalha">
+            <div class="page-heading"><div><p class="eyebrow">WORKSPACE 03 · DUELO</p><h1>Batalha 1v1</h1><p class="heading-subtitle">Coloque dois oponentes na arena. A física decide o vencedor — você decide o tema.</p></div><span class="page-status orange-status"><span class="status-dot"></span> simulation mode</span></div>
+            <form class="workspace-grid" data-studio-form data-job-type="batalha" id="battle-form"><div class="workspace-main"><section class="panel form-panel"><div class="step-head"><span class="step-number orange-step">01</span><div><h2>Escolha o confronto</h2><p>Descreva os dois lados ou deixe a IA interpretar o tema.</p></div></div><div class="field-group"><label class="field-label" for="battle-theme">Tema do duelo</label><input class="field field-xl" id="battle-theme" name="theme" value="Filmes de ficção científica" placeholder="Ex.: Batman vs Superman, marcas, times…" /></div><div class="field-group"><label class="field-label" for="battle-mode">Modo de jogo</label><select class="field" id="battle-mode" name="modo"><option value="tamanho">Duelo de tamanho (Agar.io)</option><option value="territorio">Domínio de território</option><option value="plinko">Corrida (Plinko)</option></select><div class="field-helper">Tamanho altera o raio · território pinta a arena · corrida leva até a linha de chegada.</div></div></section><section class="panel form-panel"><div class="step-head"><span class="step-number orange-step">02</span><div><h2>Voz da arena</h2><p>Uma abertura narrada coloca o público dentro do duelo.</p></div></div><div class="field-group"><label class="field-label" for="battle-voice">Voz da narração</label><select class="field" id="battle-voice" name="tts_voice" data-voice-select><option value="">Carregando vozes…</option></select></div></section><div class="form-actions"><span class="action-note"><svg class="icon icon-xs"><use href="#i-info"></use></svg> Groq, imagens, TTS e FFmpeg entram em sequência.</span><button class="button button-primary orange-button" type="submit" data-job-control><svg class="icon"><use href="#i-battle"></use></svg> Gerar batalha</button></div><p class="form-feedback" id="battle-feedback" role="status"></p></div><aside class="workspace-side"><div class="battle-preview"><div class="arena-glow"></div><span class="preview-label">ARENA 01</span><div class="fighters"><div class="fighter fighter-a"><span></span><strong>A</strong></div><div class="vs">VS</div><div class="fighter fighter-b"><span></span><strong>B</strong></div></div><div class="arena-caption">que vença o melhor</div></div><div class="panel mini-panel"><span class="panel-badge orange-badge">DIREÇÃO</span><h3>Deixe o tema ser específico</h3><p>“Filmes de ficção científica” já funciona. “Filmes sci-fi que mudaram o cinema” dá uma arena ainda melhor.</p></div></aside></form>
+          </section>
+
+          <section class="page" data-page="historia">
+            <div class="page-heading"><div><p class="eyebrow">WORKSPACE 04 · NARRATIVA</p><h1>História em vídeo</h1><p class="heading-subtitle">Escreva uma história. A IA divide em cenas, cria o clima e monta a narrativa vertical.</p></div><span class="page-status blue-status"><span class="status-dot"></span> até 5 cenas</span></div>
+            <form class="workspace-grid" data-studio-form data-job-type="historia" id="story-form"><div class="workspace-main"><section class="panel form-panel story-panel"><div class="step-head"><span class="step-number blue-step">01</span><div><h2>Conte a história</h2><p>Quanto mais contexto e detalhes visuais, melhor a continuidade entre cenas.</p></div></div><div class="field-group"><label class="field-label" for="story-text">Texto da história</label><textarea class="field textarea story-textarea" id="story-text" name="story_text" rows="15">Cole ou escreva aqui a história completa.
+
+A IA vai dividir a narrativa em 3 a 5 cenas, criar a narração, gerar os visuais e montar o MP4 final.</textarea><div class="character-count"><span id="story-count">0</span> caracteres · recomendado: uma ideia com começo, desenvolvimento e virada</div></div></section><section class="panel form-panel"><div class="step-head"><span class="step-number blue-step">02</span><div><h2>Voz da narrativa</h2><p>Escolha quem vai conduzir a história.</p></div></div><div class="field-group"><label class="field-label" for="story-voice">Voz</label><select class="field" id="story-voice" name="tts_voice" data-voice-select><option value="">Carregando vozes…</option></select></div><div class="info-banner"><svg class="icon"><use href="#i-info"></use></svg><span>Este fluxo requer ComfyUI em <code>127.0.0.1:8188</code> com <code>workflow_historia.json</code>.</span></div></section><div class="form-actions"><span class="action-note"><svg class="icon icon-xs"><use href="#i-clock"></use></svg> Cenas com IA podem levar alguns minutos.</span><button class="button button-primary blue-button" type="submit" data-job-control><svg class="icon"><use href="#i-book"></use></svg> Gerar vídeo da história</button></div><p class="form-feedback" id="story-feedback" role="status"></p></div><aside class="workspace-side"><div class="story-preview"><span class="preview-label">STORYBOARD</span><div class="story-scene scene-one"><span>01</span></div><div class="story-scene scene-two"><span>02</span></div><div class="story-scene scene-three"><span>03</span></div><div class="story-thread"></div></div><div class="panel mini-panel"><span class="panel-badge blue-badge">CONTINUIDADE</span><h3>Uma cena puxa a outra</h3><p>Personagens, luz e ambiente são mantidos em uma sequência para a história parecer um filme.</p></div></aside></form>
+          </section>
+
+          <section class="page" data-page="tts">
+            <div class="page-heading"><div><p class="eyebrow">WORKSPACE 05 · ÁUDIO</p><h1>Voz / TTS</h1><p class="heading-subtitle">Transforme texto em uma locução pronta para usar nos seus vídeos.</p></div><span class="page-status"><span class="status-dot is-live"></span> local + cloud</span></div>
+            <form class="workspace-grid" data-studio-form data-job-type="tts" id="tts-form"><div class="workspace-main"><section class="panel form-panel"><div class="step-head"><span class="step-number">01</span><div><h2>Escreva a locução</h2><p>Use o texto final. Pontuação e quebras ajudam o ritmo da voz.</p></div></div><div class="field-group"><label class="field-label" for="tts-text">Texto para sintetizar</label><textarea class="field textarea story-textarea" id="tts-text" name="text" rows="13">Olá! Esta é a voz do seu próximo vídeo. Use este espaço para testar ritmo, clareza e personalidade.</textarea><div class="character-count"><span id="tts-count">0</span> caracteres</div></div></section><section class="panel form-panel"><div class="step-head"><span class="step-number">02</span><div><h2>Escolha a voz</h2><p>Teste uma amostra antes de gerar o MP3 completo.</p></div></div><div class="field-group"><label class="field-label" for="tts-voice">Voz</label><select class="field" id="tts-voice" name="tts_voice" data-voice-select><option value="">Carregando vozes…</option></select></div><div class="voice-actions"><button class="button button-secondary" type="button" id="tts-preview-btn"><svg class="icon"><use href="#i-play"></use></svg> Ouvir amostra</button><audio id="tts-preview-player" class="audio-player" controls hidden></audio></div><div class="info-banner"><svg class="icon"><use href="#i-mic"></use></svg><span>O MP3 final é salvo em <code>resultados/tts/</code>.</span></div></section><div class="form-actions"><span class="action-note"><svg class="icon icon-xs"><use href="#i-check"></use></svg> Voz local Kokoro é priorizada quando instalada.</span><button class="button button-primary" type="submit" data-job-control><svg class="icon"><use href="#i-mic"></use></svg> Gerar MP3</button></div><p class="form-feedback" id="tts-feedback" role="status"></p></div><aside class="workspace-side"><div class="wave-preview"><span class="preview-label">WAVEFORM</span><div class="wave-bars"></div><div class="wave-time"><span>00:00</span><span>voice track</span><span>00:18</span></div></div><div class="panel mini-panel"><span class="panel-badge accent-badge">DICA</span><h3>Escreva como você fala</h3><p>Frases curtas, pontuação natural e uma ideia por vez deixam a locução mais humana.</p></div></aside></form>
+          </section>
+
+          <section class="page" data-page="analytics">
+            <div class="page-heading"><div><p class="eyebrow">OPERAÇÃO · INSIGHTS</p><h1>Analytics</h1><p class="heading-subtitle">Leia o que performou, transforme métricas em direção editorial e alimente o próximo lote.</p></div><span class="page-status purple-status"><span class="status-dot"></span> dados → decisão</span></div>
+            <div class="analytics-grid"><section class="panel analytics-input"><div class="step-head"><span class="step-number purple-step">01</span><div><h2>Desempenho dos posts</h2><p>Importe um CSV do TikTok, YouTube ou outra rede.</p></div></div><form id="performance-form"><label class="dropzone compact-drop" for="performance-file"><input id="performance-file" type="file" accept=".csv,text/csv" /><span class="dropzone-icon"><svg class="icon"><use href="#i-upload"></use></svg></span><strong id="performance-file-label">Escolher CSV de desempenho</strong><small>vídeos, views, likes, retenção e seguidores</small></label><label class="toggle-row inline-toggle"><input id="performance-use-ai" type="checkbox" checked /><span class="fake-toggle"></span><span><strong>Usar síntese da IA</strong><small>com fallback para ranking local</small></span></label><button class="button button-primary purple-button full-button" type="submit"><svg class="icon"><use href="#i-chart"></use></svg> Analisar e recomendar</button></form><p class="form-feedback" id="performance-feedback" role="status"></p></section><section class="panel analytics-results"><div class="panel-head"><div><p class="eyebrow">RECOMENDAÇÕES</p><h2>Próximos temas</h2></div><span class="panel-badge purple-badge">TOP 3</span></div><p class="result-summary" id="performance-summary">As recomendações aparecerão aqui depois da análise.</p><div class="recommendations" id="recommendations"><div class="empty-state compact-empty"><svg class="icon"><use href="#i-chart"></use></svg><p>Ainda não há recomendações.</p><small>Envie seu CSV para encontrar padrões.</small></div></div></section></div>
+            <div class="analytics-grid retention-row"><section class="panel analytics-input"><div class="step-head"><span class="step-number blue-step">02</span><div><h2>Loop de retenção</h2><p>Use o JSON exportado pelo TikTok para descobrir duração e janelas vencedoras.</p></div></div><form id="retention-form"><label class="dropzone compact-drop" for="retention-file"><input id="retention-file" type="file" accept=".json,application/json" /><span class="dropzone-icon blue-drop"><svg class="icon"><use href="#i-upload"></use></svg></span><strong id="retention-file-label">Escolher relatório JSON</strong><small>mínimo de 3 vídeos com visualizações</small></label><button class="button button-primary blue-button full-button" type="submit"><svg class="icon"><use href="#i-refresh"></use></svg> Analisar e aplicar</button></form><p class="form-feedback" id="retention-feedback" role="status"></p></section><section class="panel analytics-results"><div class="panel-head"><div><p class="eyebrow">SINAL EDITORIAL</p><h2>O que ajustar no próximo lote?</h2></div><span class="panel-badge blue-badge">PROFILE</span></div><div class="retention-result" id="retention-result"><div class="empty-state compact-empty"><svg class="icon"><use href="#i-refresh"></use></svg><p>Seu perfil de crescimento ainda não foi calculado.</p><small>O resultado será salvo em <code>data/growth_profile.json</code>.</small></div></div></section></div>
+          </section>
+
+          <section class="page" data-page="youtube">
+            <div class="page-heading"><div><p class="eyebrow">OPERAÇÃO · DISTRIBUIÇÃO</p><h1>Publicar no YouTube</h1><p class="heading-subtitle">Organize cinco vídeos, agende um por dia e deixe o canal abastecido.</p></div><span class="page-status red-status"><span class="status-dot"></span> API oficial</span></div>
+            <form class="publish-grid" id="youtube-form"><section class="panel form-panel"><div class="step-head"><span class="step-number red-step">01</span><div><h2>Selecione o lote</h2><p>São necessários 5 MP4 e 5 TXT com o mesmo nome-base.</p></div></div><label class="dropzone" for="youtube-files"><input id="youtube-files" type="file" accept=".mp4,.txt" multiple /><span class="dropzone-icon red-drop"><svg class="icon"><use href="#i-upload"></use></svg></span><strong id="youtube-file-label">Escolher 5 vídeos + 5 legendas</strong><small>os pares são ordenados pelo nome do arquivo</small></label><div class="batch-list" id="youtube-batch-list"><div class="empty-state compact-empty"><svg class="icon"><use href="#i-file"></use></svg><p>Nenhum lote selecionado.</p><small>Adicione os 10 arquivos para visualizar a sequência.</small></div></div></section><section class="panel form-panel"><div class="step-head"><span class="step-number red-step">02</span><div><h2>Agendamento e autorização</h2><p>Os vídeos ficam privados até o horário escolhido.</p></div></div><div class="form-grid two"><div class="field-group"><label class="field-label" for="youtube-time">Horário diário</label><input class="field" id="youtube-time" name="schedule_time" value="07:00" placeholder="07:00" /></div><div class="field-group"><label class="field-label" for="youtube-timezone">Fuso</label><input class="field" id="youtube-timezone" name="timezone" value="America/Campo_Grande" /></div></div><label class="toggle-row inline-toggle"><input id="youtube-kids" type="checkbox" name="made_for_kids" /><span class="fake-toggle"></span><span><strong>Conteúdo criado para crianças</strong><small>configuração enviada à API do YouTube</small></span></label><div class="field-group"><label class="field-label" for="youtube-credentials">Credencial OAuth <span>JSON do aplicativo para computador</span></label><input class="field field-file" id="youtube-credentials" type="file" accept=".json" /></div><div class="info-banner red-info"><svg class="icon"><use href="#i-info"></use></svg><span>No primeiro upload, o navegador abrirá para autorizar seu canal.</span></div><div class="schedule-preview" id="schedule-preview"></div></section><div class="publish-actions"><p class="form-feedback" id="youtube-feedback" role="status"></p><button class="button button-primary red-button" type="submit"><svg class="icon"><use href="#i-youtube"></use></svg> Agendar 5 vídeos</button></div></form>
+          </section>
+
+          <section class="page" data-page="settings">
+            <div class="page-heading"><div><p class="eyebrow">STUDIO · AMBIENTE</p><h1>Configurações locais</h1><p class="heading-subtitle">Preferências e caminhos importantes para o seu setup.</p></div><span class="page-status"><span class="status-dot is-live"></span> privado por padrão</span></div>
+            <div class="settings-grid"><section class="panel setting-card"><div class="setting-icon"><svg class="icon"><use href="#i-terminal"></use></svg></div><div><p class="eyebrow">EXECUÇÃO</p><h2>Processamento local</h2><p>Os jobs rodam em threads do servidor web. Se <code>REDIS_URL</code> estiver configurado, a fila usa Redis/RQ.</p><span class="setting-value"><span class="status-dot is-live"></span> conexão ativa</span></div></section><section class="panel setting-card"><div class="setting-icon purple-icon"><svg class="icon"><use href="#i-file"></use></svg></div><div><p class="eyebrow">ARQUIVOS</p><h2>Onde tudo fica</h2><p>Fontes temporárias em <code>temp/</code>. Vídeos, áudios e manifests em <code>resultados/</code>. Perfis em <code>data/</code>.</p><button class="text-button" type="button" data-copy-text="resultados/">Copiar caminho de saída <svg class="icon icon-xs"><use href="#i-copy"></use></svg></button></div></section><section class="panel setting-card"><div class="setting-icon blue-icon"><svg class="icon"><use href="#i-settings"></use></svg></div><div><p class="eyebrow">ATUALIZAÇÃO</p><h2>O que já está integrado</h2><p>FFmpeg, yt-dlp, Whisper, Groq, TTS local/cloud, ComfyUI, Analytics e publicação oficial.</p><div class="tag-list"><span>FFmpeg</span><span>Groq</span><span>Whisper</span><span>TTS</span><span>ComfyUI</span></div></div></section><section class="panel setting-card"><div class="setting-icon orange-icon"><svg class="icon"><use href="#i-info"></use></svg></div><div><p class="eyebrow">ATALHOS</p><h2>Para começar</h2><p>O entrypoint recomendado agora é:</p><code class="code-block">.venv/bin/python web_main.py</code><p class="setting-footnote">Você também pode manter o desktop legado executando <code>gui.py</code>.</p></div></section></div>
+          </section>
+
+          <section class="panel global-activity" id="global-activity" aria-live="polite"><div class="activity-head"><div class="activity-title-wrap"><span class="activity-live"><span class="status-dot"></span> ATIVIDADE AO VIVO</span><h2 id="activity-title">Aguardando um novo job</h2><p id="activity-message">Escolha um workspace para começar.</p></div><span class="activity-badge" id="activity-badge">OCIOSO</span></div><div class="progress-track"><div class="progress-fill" id="activity-progress"></div></div><div class="activity-meta"><span id="activity-stage">Pronto quando você estiver.</span><strong id="activity-percent">0%</strong></div><div class="activity-body"><div class="log-panel"><div class="log-head"><span>LOG DO PROCESSO</span><button class="text-button" id="clear-log" type="button">Limpar</button></div><div class="log-list" id="log-list"><div class="log-empty">As etapas do pipeline aparecerão aqui.</div></div></div><div class="output-panel"><div class="log-head"><span>SAÍDAS</span><span id="output-count">0 arquivos</span></div><div class="output-list" id="output-list"><div class="log-empty">Nenhuma saída nesta sessão.</div></div></div></div></section>
+        </div>
+      </main>
+    </div>
+    <div class="toast-region" id="toast-region" aria-live="polite"></div>
+    <script src="/static/js/app.js" defer></script>
+  </body>
 </html>

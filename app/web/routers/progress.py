@@ -24,7 +24,7 @@ async def progress_stream() -> StreamingResponse:
                 try:
                     event = await asyncio.wait_for(q.get(), timeout=25.0)
                     yield hub.sse_payload(event)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     yield ": heartbeat\n\n"
         finally:
             hub.unsubscribe(q)
@@ -48,6 +48,7 @@ async def progress_snapshot() -> dict:
         "progress": snap.progress,
         "message": snap.message,
         "outputs": snap.outputs,
+        "output_urls": snap.output_urls,
         "error": snap.error,
         "active_item_id": snap.active_item_id,
         "active_source": snap.active_source,

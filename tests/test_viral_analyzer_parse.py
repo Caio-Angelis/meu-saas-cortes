@@ -39,6 +39,16 @@ def test_parse_moments_roundtrip() -> None:
     assert rows[0]["hook"] == "h"
 
 
+def test_parse_moments_recovers_complete_objects_from_truncated_array() -> None:
+    content = (
+        '[{"start":0,"end":5,"reason":"r1","hook":"h1"},'
+        '{"start":6,"end":11,"reason":"r2","hook":"h2"},'
+        '{"start":12,"end":'
+    )
+    rows = va._parse_moments(content)
+    assert [row["hook"] for row in rows] == ["h1", "h2"]
+
+
 def test_normalize_hook_max_five_words() -> None:
     assert va._normalize_hook("one two three four five six seven") == "one two three four five"
 
@@ -57,3 +67,18 @@ def test_ends_like_sentence() -> None:
 def test_refine_clip_window_no_segments() -> None:
     s, e = va._refine_clip_window(start=1.0, segments=[], target_len=10.0)
     assert s == 1.0 and e == 11.0
+
+
+def test_build_prompt_includes_editorial_focus() -> None:
+    prompt = va._build_prompt(
+        transcript_text="Um artista comenta uma decisão política.",
+        total_duration=60,
+        candidate_count=3,
+        output_language="pt",
+        selection_profile="tiktok_growth",
+        performance_profile=None,
+        clip_target=45,
+        editorial_focus="músico brasileiro conhecido falando de política",
+    )
+    assert "FOCO EDITORIAL DESTE LOTE" in prompt
+    assert "músico brasileiro conhecido falando de política" in prompt
